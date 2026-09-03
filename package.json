@@ -10,7 +10,8 @@
     "prod": "node dist/index.js",
     "build": "tsc",
     "start": "node dist/index.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:schema": "tsx src/database/scripts/run-schemas.ts"
   },
   "keywords": [],
   "author": "",
