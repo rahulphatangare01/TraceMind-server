@@ -1,4 +1,4 @@
-#### STEP 2 — Multi-Tenant Foundation
+### STEP 2 — Multi-Tenant Foundation
 
 ```js
 TraceMind Platform
