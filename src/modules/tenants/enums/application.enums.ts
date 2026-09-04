@@ -7,13 +7,9 @@
 
 export enum ApplicationStatus {
   DRAFT = "DRAFT",
-
   ACTIVE = "ACTIVE",
-
   MAINTENANCE = "MAINTENANCE",
-
   INACTIVE = "INACTIVE",
-
   ARCHIVED = "ARCHIVED",
 
   // DELETED = "DELETED",

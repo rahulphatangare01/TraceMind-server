@@ -32,7 +32,13 @@ const organizationCodeSchema = z
     /^[A-Z0-9_-]+$/,
     "Organization code must contain only uppercase letters, numbers, underscores, or hyphens",
   );
+export const organizationSettingsSchema = z.object({
+  defaultTimezone: z.string().trim().optional(),
 
+  allowCustomEnvironments: z.boolean().default(true),
+
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 const organizationSlugSchema = z
   .string()
   .trim()
@@ -73,7 +79,8 @@ export const createOrganizationSchema = z.object({
 
   countryCode: countryCodeSchema.optional(),
 
-  settings: z.record(z.string(), z.unknown()).optional(),
+  // settings: z.record(z.string(), z.unknown()).optional(),
+  settings: organizationSettingsSchema.optional(),
 });
 
 export const updateOrganizationSchema = z
@@ -86,21 +93,14 @@ export const updateOrganizationSchema = z
 
     countryCode: countryCodeSchema.optional(),
 
-    settings: z.record(z.string(), z.unknown()).optional(),
+    settings: organizationSettingsSchema.nullable().optional(),
+
     updatedBy: z.string().uuid().nullable().optional(),
   })
   .strict();
 
 export const updateOrganizationStatusSchema = z.object({
   status: z.nativeEnum(OrganizationStatus),
-});
-
-export const organizationSettingsSchema = z.object({
-  defaultTimezone: z.string().trim().optional(),
-
-  allowCustomEnvironments: z.boolean().default(true),
-
-  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // settings: organizationSettingsSchema.optional()

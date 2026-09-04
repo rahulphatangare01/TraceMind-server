@@ -31,6 +31,16 @@ import {
   type TenantLifecycleStatus,
 } from "./tenant-lifecycle.constants.js";
 
+// export const isValidTenantStatusTransition = (
+//   currentStatus: TenantLifecycleStatus,
+//   nextStatus: TenantLifecycleStatus,
+// ): boolean => {
+//   if (currentStatus === nextStatus) {
+//     return true;
+//   }
+
+//   return TENANT_LIFECYCLE_TRANSITIONS[currentStatus].includes(nextStatus);
+// };
 export const isValidTenantStatusTransition = (
   currentStatus: TenantLifecycleStatus,
   nextStatus: TenantLifecycleStatus,
@@ -41,7 +51,6 @@ export const isValidTenantStatusTransition = (
 
   return TENANT_LIFECYCLE_TRANSITIONS[currentStatus].includes(nextStatus);
 };
-
 export const validateTenantStatusTransition = (
   currentStatus: TenantLifecycleStatus,
   nextStatus: TenantLifecycleStatus,

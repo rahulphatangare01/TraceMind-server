@@ -77,6 +77,7 @@ export const projectSettingsSchema = z.object({
 
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
+export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 
 export const createProjectSchema = z.object({
   name: projectNameSchema,

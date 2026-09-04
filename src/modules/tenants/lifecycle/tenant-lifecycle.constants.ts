@@ -70,18 +70,23 @@
 //   ARCHIVED: ["ACTIVE"],
 // };
 export enum TenantLifecycleStatus {
+  PENDING = "PENDING",
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
   SUSPENDED = "SUSPENDED",
   ARCHIVED = "ARCHIVED",
 }
 
-// import { TenantLifecycleStatus } from "../enums/index.js";
-
 export const TENANT_LIFECYCLE_TRANSITIONS: Record<
   TenantLifecycleStatus,
   readonly TenantLifecycleStatus[]
 > = {
+  [TenantLifecycleStatus.PENDING]: [
+    TenantLifecycleStatus.ACTIVE,
+    TenantLifecycleStatus.INACTIVE,
+    TenantLifecycleStatus.SUSPENDED,
+    TenantLifecycleStatus.ARCHIVED,
+  ],
   [TenantLifecycleStatus.ACTIVE]: [
     TenantLifecycleStatus.INACTIVE,
     TenantLifecycleStatus.SUSPENDED,
@@ -102,3 +107,7 @@ export const TENANT_LIFECYCLE_TRANSITIONS: Record<
 
   [TenantLifecycleStatus.ARCHIVED]: [TenantLifecycleStatus.ACTIVE],
 };
+export type OrganizationStatus = TenantLifecycleStatus;
+export type ProjectStatus = TenantLifecycleStatus;
+export type ApplicationStatus = TenantLifecycleStatus;
+export type EnvironmentStatus = TenantLifecycleStatus;

@@ -7,16 +7,10 @@
 
 export enum EnvironmentStatus {
   DRAFT = "DRAFT",
-
   ACTIVE = "ACTIVE",
-
   MAINTENANCE = "MAINTENANCE",
-
   INACTIVE = "INACTIVE",
-
   ARCHIVED = "ARCHIVED",
-
-  // DELETED = "DELETED",
 }
 
 // export enum EnvironmentType {
