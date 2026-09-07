@@ -14,6 +14,7 @@ export enum OrganizationStatus {
   ACTIVE = "ACTIVE",
   SUSPENDED = "SUSPENDED",
   INACTIVE = "INACTIVE",
+  ARCHIVED = "ARCHIVED",
   // ARCHIVED = "ARCHIVED",
   // DELETED = "DELETED",
 }

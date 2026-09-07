@@ -26,6 +26,7 @@
 //     );
 //   }
 // };
+import { LifecycleTransitionError } from "../../../common/errors/lifecycle-transition.error.js";
 import {
   TENANT_LIFECYCLE_TRANSITIONS,
   type TenantLifecycleStatus,
@@ -51,15 +52,27 @@ export const isValidTenantStatusTransition = (
 
   return TENANT_LIFECYCLE_TRANSITIONS[currentStatus].includes(nextStatus);
 };
+// export const validateTenantStatusTransition = (
+//   currentStatus: TenantLifecycleStatus,
+//   nextStatus: TenantLifecycleStatus,
+// ): void => {
+//   const isValid = isValidTenantStatusTransition(currentStatus, nextStatus);
+
+//   if (!isValid) {
+//     throw new Error(
+//       `Invalid tenant lifecycle transition: ${currentStatus} → ${nextStatus}`,
+//     );
+//   }
+// };
+
 export const validateTenantStatusTransition = (
-  currentStatus: TenantLifecycleStatus,
-  nextStatus: TenantLifecycleStatus,
+  resource: string,
+  currentStatus: string | any,
+  nextStatus: string | any,
 ): void => {
   const isValid = isValidTenantStatusTransition(currentStatus, nextStatus);
 
   if (!isValid) {
-    throw new Error(
-      `Invalid tenant lifecycle transition: ${currentStatus} → ${nextStatus}`,
-    );
+    throw new LifecycleTransitionError(resource, currentStatus, nextStatus);
   }
 };

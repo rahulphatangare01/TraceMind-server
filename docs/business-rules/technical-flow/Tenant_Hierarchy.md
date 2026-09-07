@@ -177,3 +177,179 @@ Lifecycle Transition Validation
      ↓
 Repository Update
 ```
+
+## Tenant Service Business Rules & Hierarchy Validation
+
+### STEP 2.6.6 — Architecture
+
+```js
+Controller
+   ↓
+Zod Validation
+   ↓
+Service
+   ├── Validate parent hierarchy
+   ├── Check entity exists
+   ├── Check tenant ownership
+   ├── Check uniqueness
+   ├── Apply business rules
+   ├── Build entity
+   ↓
+Repository
+   ↓
+MySQL
+```
+
+- Our hierarchy is:
+
+```js
+Organization
+     │
+     └── Project
+            │
+            └── Application
+                   │
+                   └── Environment
+```
+
+-The service must never trust parent IDs blindly.
+
+#### 1. Business Rules We Will Implement
+
+- **Organization**
+
+```js
+Create Organization
+    ↓
+Check Code is unique
+Check Slug is unique
+    ↓
+Create
+```
+
+- **Project**
+
+```js
+Create Project
+    ↓
+Organization exists?
+Organization is deleted?
+Organization status allows creation?
+    ↓
+Project code unique inside Organization?
+Project slug unique inside Organization?
+    ↓
+Create
+```
+
+- **Application**
+
+```js
+Create Application
+    ↓
+Organization exists?
+Project exists?
+Project belongs to Organization?
+    ↓
+Application code unique inside Project?
+Application slug unique inside Project?
+    ↓
+Create
+```
+
+- **Environment**
+
+```js
+Create Environment
+    ↓
+Organization exists?
+Project exists?
+Project belongs to Organization?
+Application exists?
+Application belongs to Project + Organization?
+    ↓
+Environment slug unique inside Application?
+    ↓
+Create
+```
+
+```js
+ProjectService
+      ↓
+ProjectRepository
+      ↓
+OrganizationRepository
+```
+
+- The database must also enforce uniqueness:
+
+```js
+Organizations;
+UNIQUE(code);
+UNIQUE(slug);
+
+Projects;
+UNIQUE(organization_id, code);
+UNIQUE(organization_id, slug);
+
+Applications;
+UNIQUE(project_id, code);
+UNIQUE(project_id, slug);
+
+Environments;
+UNIQUE(application_id, slug);
+```
+
+- After STEP 2.6.6:
+
+```js
+✓ Parent hierarchy validated
+✓ Cross-tenant access prevented
+✓ Entity ownership checked
+✓ Code uniqueness validated
+✓ Slug uniqueness validated
+✓ Archived parent restrictions enforced
+✓ Services own business logic
+✓ Repositories remain persistence-focused
+✓ Database remains the final integrity layer
+```
+
+- centralized enterprise-level errors such as:
+
+```js
+NotFoundError;
+ConflictError;
+BusinessRuleError;
+TenantHierarchyError;
+InvalidLifecycleTransitionError;
+```
+
+#### STEP 2.6.7 — Tenant Error Handling & Domain Exceptions
+
+##### 1. Target Architecture
+
+```js
+Controller
+    ↓
+Service
+    ↓
+Domain Exception
+    ↓
+Global Error Middleware
+    ↓
+Standard API Error Response
+```
+
+- For example:
+
+```js
+ProjectService
+    ↓
+Organization not found
+    ↓
+NotFoundError
+    ↓
+Global Error Handler
+    ↓
+HTTP 404
+```

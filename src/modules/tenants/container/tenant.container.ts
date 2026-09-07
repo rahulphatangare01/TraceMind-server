@@ -24,8 +24,23 @@ export const organizationService = new OrganizationService(
   organizationRepository,
 );
 
-export const projectService = new ProjectService(projectRepository);
+// export const projectService = new ProjectService(projectRepository);
+export const projectService = new ProjectService(
+  projectRepository,
+  organizationRepository,
+);
 
-export const applicationService = new ApplicationService(applicationRepository);
+// export const applicationService = new ApplicationService(applicationRepository);
+export const applicationService = new ApplicationService(
+  applicationRepository,
+  organizationRepository,
+  projectRepository,
+);
 
-export const environmentService = new EnvironmentService(environmentRepository);
+// export const environmentService = new EnvironmentService(environmentRepository);
+export const environmentService = new EnvironmentService(
+  environmentRepository,
+  organizationRepository,
+  projectRepository,
+  applicationRepository,
+);

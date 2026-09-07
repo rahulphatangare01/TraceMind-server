@@ -13,12 +13,66 @@ import {
   validateTenantStatusTransition,
 } from "../lifecycle/index.js";
 import { generateId } from "../../../common/utils/id.generrator.js";
+import { ConflictError, NotFoundError } from "../../../common/errors/index.js";
 export class OrganizationService {
   constructor(
     private readonly organizationRepository: IOrganizationRepository,
   ) {}
 
+  // async create(data: CreateOrganizationInput): Promise<Organization> {
+  //   const now = new Date();
+
+  //   const organization: Organization = {
+  //     id: generateId(),
+
+  //     name: data.name,
+  //     displayName: data.displayName ?? null,
+  //     code: data.code,
+  //     slug: data.slug,
+
+  //     type: data.type,
+
+  //     status: OrganizationStatus.PENDING,
+
+  //     timezone: data.timezone,
+  //     countryCode: data.countryCode ?? null,
+
+  //     settings: data.settings ?? null,
+
+  //     createdBy: null,
+  //     updatedBy: null,
+  //     deletedBy: null,
+
+  //     createdAt: now,
+  //     updatedAt: now,
+  //     deletedAt: null,
+  //   };
+
+  //   return this.organizationRepository.create(organization);
+  // }
   async create(data: CreateOrganizationInput): Promise<Organization> {
+    const existingByCode = await this.organizationRepository.findByCode(
+      data.code,
+    );
+
+    if (existingByCode) {
+      // throw new Error(`Organization code "${data.code}" already exists`);
+      throw new ConflictError(
+        `Organization code "${data.code}" already exists`,
+      );
+    }
+
+    const existingBySlug = await this.organizationRepository.findBySlug(
+      data.slug,
+    );
+
+    if (existingBySlug) {
+      // throw new Error(`Organization slug "${data.slug}" already exists`);
+      throw new ConflictError(
+        `Organization slug  "${data.slug}" already exists`,
+      );
+    }
+
     const now = new Date();
 
     const organization: Organization = {
@@ -28,14 +82,12 @@ export class OrganizationService {
       displayName: data.displayName ?? null,
       code: data.code,
       slug: data.slug,
-
       type: data.type,
 
       status: OrganizationStatus.PENDING,
 
       timezone: data.timezone,
       countryCode: data.countryCode ?? null,
-
       settings: data.settings ?? null,
 
       createdBy: null,
@@ -73,11 +125,13 @@ export class OrganizationService {
       await this.organizationRepository.findById(organizationId);
 
     if (!organization) {
-      throw new Error("Organization not found");
+      // throw new Error("Organization not found");
+      throw new NotFoundError("Organization", organizationId);
     }
 
     // validateTenantStatusTransition(organization.status, nextStatus);
     validateTenantStatusTransition(
+      "Organization",
       organization.status as unknown as TenantLifecycleStatus,
       nextStatus as unknown as TenantLifecycleStatus,
     );
@@ -97,5 +151,15 @@ export class OrganizationService {
     restoredBy?: string,
   ): Promise<Organization | null> {
     return this.organizationRepository.restore(organizationId, restoredBy);
+  }
+
+  // async findByCode(code: string): Promise<Organization | null>;
+  async findByCode(code: string): Promise<Organization | null> {
+    return this.organizationRepository.findByCode(code);
+  }
+
+  // findBySlug(slug: string): Promise<Organization | null>;
+  findBySlug(slug: string): Promise<Organization | null> {
+    return this.organizationRepository.findByCode(slug);
   }
 }

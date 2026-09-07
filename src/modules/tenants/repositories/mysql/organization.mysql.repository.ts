@@ -303,4 +303,28 @@ export class OrganizationMySQLRepository implements IOrganizationRepository {
 
     return this.findById(organizationId);
   }
+  //   async findByCode(
+  //   organizationId: string,
+  //   code: string,
+  // ): Promise<Project | null> {
+  //   const query = `
+  //     SELECT *
+  //     FROM projects
+  //     WHERE organization_id = ?
+  //       AND code = ?
+  //       AND deleted_at IS NULL
+  //     LIMIT 1
+  //   `;
+
+  //   const [rows] = await pool.execute<ProjectRow[]>(
+  //     query,
+  //     [organizationId, code],
+  //   );
+
+  //   if (rows.length === 0) {
+  //     return null;
+  //   }
+
+  //   return this.mapRowToProject(rows[0]);
+  // }
 }
