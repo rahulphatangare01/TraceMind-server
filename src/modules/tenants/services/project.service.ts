@@ -14,6 +14,7 @@ import { generateId } from "../../../common/utils/id.generrator.js";
 
 import {
   TenantLifecycleStatus,
+  validateProjectStatusTransition,
   validateTenantStatusTransition,
 } from "../lifecycle/index.js";
 import {
@@ -167,25 +168,27 @@ export class ProjectService {
     organizationId: string,
     projectId: string,
     nextStatus: ProjectStatus,
+    updatedBy: string,
   ): Promise<Project | null> {
     const project = await this.findById(organizationId, projectId);
 
     if (!project) {
       // throw new Error("Project not found");
-      throw new NotFoundError("Organization", organizationId);
+      throw new NotFoundError("Project", projectId);
     }
 
     // validateTenantStatusTransition(project.status, nextStatus);
-    validateTenantStatusTransition(
-      "Project",
-      project.status as unknown as TenantLifecycleStatus,
-      nextStatus as unknown as TenantLifecycleStatus,
-    );
-
+    // validateTenantStatusTransition(
+    //   "Project",
+    //   project.status as unknown as TenantLifecycleStatus,
+    //   nextStatus as unknown as TenantLifecycleStatus,
+    // );
+    validateProjectStatusTransition(project.status, nextStatus);
     return this.projectRepository.updateStatus(
       organizationId,
       projectId,
       nextStatus,
+      updatedBy,
     );
   }
 

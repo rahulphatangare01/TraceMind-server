@@ -43,6 +43,7 @@ export interface IApplicationRepository {
     projectId: string,
     applicationId: string,
     status: ApplicationStatus,
+    updatedBy: string,
   ): Promise<Application | null>;
 
   softDelete(

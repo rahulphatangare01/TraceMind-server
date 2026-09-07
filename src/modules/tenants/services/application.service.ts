@@ -18,6 +18,7 @@ import type {
 
 import {
   TenantLifecycleStatus,
+  validateApplicationStatusTransition,
   validateTenantStatusTransition,
 } from "../lifecycle/index.js";
 import { generateId } from "../../../common/utils/id.generrator.js";
@@ -213,6 +214,7 @@ export class ApplicationService {
     projectId: string,
     applicationId: string,
     nextStatus: ApplicationStatus,
+    updatedBy: string,
   ): Promise<Application | null> {
     const application = await this.findById(
       organizationId,
@@ -222,20 +224,22 @@ export class ApplicationService {
 
     if (!application) {
       // throw new Error("Application not found");
-      throw new NotFoundError("Application", organizationId);
+      throw new NotFoundError("Application", applicationId);
     }
 
     // validateTenantStatusTransition(application.status, nextStatus);
-    validateTenantStatusTransition(
-      "Application",
-      application.status as unknown as TenantLifecycleStatus,
-      nextStatus as unknown as TenantLifecycleStatus,
-    );
+    // validateTenantStatusTransition(
+    //   "Application",
+    //   application.status as unknown as TenantLifecycleStatus,
+    //   nextStatus as unknown as TenantLifecycleStatus,
+    // );
+    validateApplicationStatusTransition(application.status, nextStatus);
     return this.applicationRepository.updateStatus(
       organizationId,
       projectId,
       applicationId,
       nextStatus,
+      updatedBy,
     );
   }
 

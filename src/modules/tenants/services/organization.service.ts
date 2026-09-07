@@ -10,6 +10,7 @@ import type { IOrganizationRepository } from "../repositories/interfaces/index.j
 
 import {
   TenantLifecycleStatus,
+  validateOrganizationStatusTransition,
   validateTenantStatusTransition,
 } from "../lifecycle/index.js";
 import { generateId } from "../../../common/utils/id.generrator.js";
@@ -130,12 +131,12 @@ export class OrganizationService {
     }
 
     // validateTenantStatusTransition(organization.status, nextStatus);
-    validateTenantStatusTransition(
-      "Organization",
-      organization.status as unknown as TenantLifecycleStatus,
-      nextStatus as unknown as TenantLifecycleStatus,
-    );
-
+    // validateTenantStatusTransition(
+    //   "Organization",
+    //   organization.status as unknown as TenantLifecycleStatus,
+    //   nextStatus as unknown as TenantLifecycleStatus,
+    // );
+    validateOrganizationStatusTransition(organization.status, nextStatus);
     return this.organizationRepository.updateStatus(organizationId, nextStatus);
   }
 

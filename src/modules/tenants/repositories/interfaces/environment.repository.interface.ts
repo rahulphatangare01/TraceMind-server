@@ -42,6 +42,7 @@ export interface IEnvironmentRepository {
     applicationId: string,
     environmentId: string,
     status: EnvironmentStatus,
+    updatedBy: string,
   ): Promise<Environment | null>;
 
   softDelete(

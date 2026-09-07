@@ -23,6 +23,7 @@ export interface IProjectRepository {
     organizationId: string,
     projectId: string,
     status: ProjectStatus,
+    updatedBy: string,
   ): Promise<Project | null>;
 
   softDelete(

@@ -20,6 +20,7 @@ import type {
 
 import {
   TenantLifecycleStatus,
+  validateEnvironmentStatusTransition,
   validateTenantStatusTransition,
 } from "../lifecycle/index.js";
 import { generateId } from "../../../common/utils/id.generrator.js";
@@ -233,6 +234,7 @@ export class EnvironmentService {
     applicationId: string,
     environmentId: string,
     nextStatus: EnvironmentStatus,
+    updatedBy: string,
   ): Promise<Environment | null> {
     const environment = await this.findById(
       organizationId,
@@ -247,17 +249,19 @@ export class EnvironmentService {
     }
 
     // validateTenantStatusTransition(environment.status, nextStatus);
-    validateTenantStatusTransition(
-      "Environment",
-      environment.status as unknown as TenantLifecycleStatus,
-      nextStatus as unknown as TenantLifecycleStatus,
-    );
+    // validateTenantStatusTransition(
+    //   "Environment",
+    //   environment.status as unknown as TenantLifecycleStatus,
+    //   nextStatus as unknown as TenantLifecycleStatus,
+    // );
+    validateEnvironmentStatusTransition(environment.status, nextStatus);
     return this.environmentRepository.updateStatus(
       organizationId,
       projectId,
       applicationId,
       environmentId,
       nextStatus,
+      updatedBy,
     );
   }
 
