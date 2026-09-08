@@ -196,3 +196,6 @@ export const environmentSchema = z
       });
     }
   });
+export const changeEnvironmentStatusSchema = z.object({
+  status: z.nativeEnum(EnvironmentStatus),
+});

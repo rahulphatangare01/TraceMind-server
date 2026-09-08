@@ -135,3 +135,7 @@ export const organizationSchema = z.object({
   updatedBy: z.string().uuid().nullable().optional(),
   deletedBy: z.string().uuid().nullable().optional(),
 });
+
+export const changeOrganizationStatusSchema = z.object({
+  status: z.nativeEnum(OrganizationStatus),
+});

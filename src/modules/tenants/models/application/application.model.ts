@@ -164,3 +164,7 @@ export const applicationSchema = z.object({
   updatedBy: z.string().uuid().nullable().optional(),
   deletedBy: z.string().uuid().nullable().optional(),
 });
+
+export const changeApplicationStatusSchema = z.object({
+  status: z.nativeEnum(ApplicationStatus),
+});

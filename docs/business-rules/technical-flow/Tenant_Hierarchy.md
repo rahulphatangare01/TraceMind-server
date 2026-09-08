@@ -570,3 +570,312 @@ MySQL
   | Environment | MAINTENANCE | ACTIVE, INACTIVE, ARCHIVED |
   | Environment | INACTIVE | ACTIVE, ARCHIVED |
   | Environment | ARCHIVED | — |
+
+## STEP 2.7 — Tenant API Layer
+
+- At this stage, our tenant domain and persistence layer are ready. The next logical step is to expose them through a clean, production-ready REST API.
+
+- The goal is:
+
+```js
+
+                    TraceMind API
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │   Router     │
+                  └──────┬───────┘
+                         ▼
+                  ┌──────────────┐
+                  │  Controller  │
+                  └──────┬───────┘
+                         ▼
+                  ┌──────────────┐
+                  │   Service    │
+                  └──────┬───────┘
+                         ▼
+                  ┌──────────────┐
+                  │  Repository  │
+                  └──────┬───────┘
+                         ▼
+                       MySQL
+```
+
+- We should not add authentication/RBAC yet because that belongs to STEP 3. However, the API structure should be designed so IAM can be plugged in later without rewriting controllers/services.
+
+**STEP 2.7 Breakdown**
+
+- We'll implement this incrementally:
+
+```js
+STEP 2.7 — Tenant API Layer
+
+2.7.1 → API Response Standard
+2.7.2 → Request Validation Middleware
+2.7.3 → Organization Controller
+2.7.4 → Organization Routes
+2.7.5 → Project Controller & Routes
+2.7.6 → Application Controller & Routes
+2.7.7 → Environment Controller & Routes
+2.7.8 → Tenant Router Registration
+2.7.9 → API Error Integration
+2.7.10 → API Testing & Refinement
+```
+
+**Important controller rule**
+
+- When we start implementing controllers, controllers should not contain business logic.
+
+- For example, don't do this:
+
+```js
+if (organization.status === "ARCHIVED") {
+  ...
+}
+```
+
+- inside the controller.
+
+Instead:
+
+```js
+Controller
+    ↓
+validate request
+    ↓
+Service
+    ↓
+business rules
+```
+
+- The controller's responsibility is:
+
+```js
+HTTP Request
+↓
+Extract params/body
+↓
+Call service
+↓
+Return HTTP response
+```
+
+- After 2.7 is complete, we'll have endpoints approximately like:
+
+- **Target Organization API**
+
+```js
+POST /api/v1/organizations
+GET /api/v1/organizations
+GET /api/v1/organizations/:organizationId
+PATCH /api/v1/organizations/:organizationId
+PATCH /api/v1/organizations/:organizationId/status
+DELETE /api/v1/organizations/:organizationId
+POST /api/v1/organizations/:organizationId/restore
+```
+
+- **Projects**:
+
+```js
+POST /api/v1/organizations/:organizationId/projects
+GET /api/v1/organizations/:organizationId/projects
+GET /api/v1/organizations/:organizationId/projects/:projectId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId/status
+DELETE /api/v1/organizations/:organizationId/projects/:projectId
+POST /api/v1/organizations/:organizationId/projects/:projectId/restore
+```
+
+- **Applications**:
+
+```js
+POST /api/v1/organizations/:organizationId/projects/:projectId/applications
+GET /api/v1/organizations/:organizationId/projects/:projectId/applications
+GET /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/status
+DELETE /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId
+POST /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/restore
+```
+
+- **Environments**:
+
+```js
+POST /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments
+GET /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments
+GET /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments/:environmentId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments/:environmentId
+PATCH /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments/:environmentId/status
+DELETE /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments/:environmentId
+POST /api/v1/organizations/:organizationId/projects/:projectId/applications/:applicationId/environments/:environmentId/restore
+```
+
+- This hierarchy is intentional.
+
+- It prevents APIs such as:
+
+`GET /projects/project_123`
+
+- from becoming ambiguous across organizations.
+
+- **Why /api/v1**
+
+- Use:
+
+`/api/v1`
+
+- from the beginning.
+
+- Later:
+
+`/api/v2`
+
+- can coexist without breaking existing clients.
+
+#### STEP 2.7.2 — Request Validation Middleware
+
+- **1. Target architecture**
+
+- We want:
+
+```js
+HTTP Request
+     │
+     ▼
+Request Context Middleware
+     │
+     ▼
+Validation Middleware
+     │
+     ├── Invalid → ValidationError → Global Error Handler
+     │
+     ▼
+Controller
+     │
+     ▼
+Service
+     │
+     ▼
+Repository
+```
+
+- The important rule is:
+
+- `Validate at the API boundary, enforce business rules in the service.`
+
+- So Zod handles things like:
+
+```js
+required fields
+string length
+format
+enum values
+UUID/string structure
+request body shape
+```
+
+- while services handle:
+
+```js
+duplicate organization code
+parent hierarchy
+archived organization restrictions
+lifecycle transitions
+authorization later
+```
+
+```js
+Request
+   │
+   ▼
+validateRequest()
+   │
+   ├── invalid
+   │      ↓
+   │ ValidationError
+   │      ↓
+   │ Global Error Handler
+   │
+   └── valid
+          ↓
+      Controller
+```
+
+**Middleware ordering**
+
+- This is important.
+
+- In app.ts, the order should eventually be:
+
+```js
+app.use(requestContextMiddleware);
+
+app.use(express.json());
+
+app.use("/api/v1", apiRouter);
+
+app.use(errorHandlerMiddleware);
+```
+
+- Conceptually:
+
+```js
+                    HTTP Request
+                         │
+                         ▼
+              Request Context Middleware
+                         │
+                         ▼
+                  JSON Body Parser
+                         │
+                         ▼
+                     API Router
+                         │
+                         ▼
+               Request Validation
+                         │
+                         ▼
+                    Controller
+                         │
+                         ▼
+                     Service
+                         │
+                         ▼
+                   Repository
+                         │
+                         ▼
+                      MySQL
+                         │
+                         ▼
+                Global Error Handler
+```
+
+- The request-context middleware must execute before the API routes and error handler, otherwise `requestId` and `traceId` won't reliably exist when an error occurs.
+
+-Don't mix validation response formatting into api-response.ts.
+
+- Responsibilities should remain:
+
+```js
+api-response.ts
+    ↓
+Response contracts
+
+api-response utility
+    ↓
+Success response helpers
+
+validation.middleware.ts
+    ↓
+Request validation
+
+errors/
+    ↓
+Domain/application errors
+
+error-handler.middleware.ts
+    ↓
+HTTP error conversion
+```
+
+- That's much cleaner for the long-term TraceMind architecture.

@@ -154,3 +154,7 @@ export const projectSchema = z.object({
   updatedBy: z.string().uuid().nullable().optional(),
   deletedBy: z.string().uuid().nullable().optional(),
 });
+
+export const changeProjectStatusSchema = z.object({
+  status: z.nativeEnum(ProjectStatus),
+});
