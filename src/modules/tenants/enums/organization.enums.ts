@@ -32,4 +32,5 @@ export enum OrganizationType {
   PARTNER = "PARTNER",
   RESELLER = "RESELLER",
   DEMO = "DEMO",
+  SAAS = "SAAS",
 }

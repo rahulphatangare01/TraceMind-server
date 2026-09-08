@@ -607,8 +607,9 @@ MySQL
 
 - We'll implement this incrementally:
 
+- STEP 2.7 — Tenant API Layer
+
 ```js
-STEP 2.7 — Tenant API Layer
 
 2.7.1 → API Response Standard
 2.7.2 → Request Validation Middleware
@@ -879,3 +880,368 @@ HTTP error conversion
 ```
 
 - That's much cleaner for the long-term TraceMind architecture.
+
+#### STEP 2.7.3 — Organization Controller
+
+- **1. Controller responsibility**
+
+- The controller should only handle:
+
+```js
+HTTP Request
+    ↓
+Extract params/body
+    ↓
+Call OrganizationService
+    ↓
+Return HTTP response
+```
+
+- It should not contain:
+
+```js
+database queries
+uniqueness checks
+lifecycle rules
+organization hierarchy rules
+business rules
+authorization logic
+```
+
+- Those already belong to the service layer and later IAM
+
+- **2. Expected Organization API**
+
+- We'll support these operations:
+
+```js
+POST   /organizations
+GET    /organizations
+GET    /organizations/:organizationId
+PATCH  /organizations/:organizationId
+PATCH  /organizations/:organizationId/status
+DELETE /organizations/:organizationId
+POST   /organizations/:organizationId/restore
+```
+
+- This controller will implement all seven operations.
+
+```js
+Authentication
+      ↓
+Request Context
+      ↓
+userId
+      ↓
+Controller
+      ↓
+Service
+      ↓
+updatedBy
+```
+
+- For now, your service can continue using null until STEP 3 introduces IAM.
+
+- This is important because clients must never be trusted to tell us:
+
+`"I am user XYZ."`
+
+- **Controller dependency injection**
+
+- We already established the container pattern:
+
+```js
+Controller
+   ↓
+Service
+   ↓
+Repository Interface
+   ↓
+MySQL Repository
+```
+
+- **Error handling**
+
+```js
+ConflictError
+    ↓
+409
+
+ValidationError
+    ↓
+400
+
+BusinessRuleError
+    ↓
+422
+
+ForbiddenError
+    ↓
+403
+
+LifecycleTransitionError
+    ↓
+422
+```
+
+- Our architecture is:
+
+```js
+             ┌───────────────┐
+             │   Controller  │
+             └───────┬───────┘
+                     │
+                     ▼
+             ┌───────────────┐
+             │    Service    │
+             └───────┬───────┘
+                     │
+                     │ error
+                     ▼
+             ┌───────────────┐
+             │ Global Error  │
+             │   Handler     │
+             └───────────────┘
+```
+
+- **11. Async controller consideration**
+
+```js
+Your Express version matters here.
+If you're using standard Express 4 behavior, rejected promises from async handlers aren't automatically forwarded in every setup.
+If you don't already have an async wrapper, we'll handle that at the route layer in the next step.
+Don't introduce another async abstraction now unless your current project needs it.
+We can make that decision while implementing routes in 2.7.4.
+```
+
+#### STEP 2.7.4 — Organization Routes & API Registration.
+
+- The objective is to connect:
+
+```js
+HTTP Request
+    ↓
+Organization Router
+    ↓
+Validation Middleware
+    ↓
+Organization Controller
+    ↓
+Organization Service
+    ↓
+Repository
+    ↓
+MySQL
+```
+
+- We will keep this step limited to Organization APIs. Project/Application/Environment routes come later.
+
+- we need:
+
+```js
+Controller Promise rejection
+        ↓
+asyncHandler
+        ↓
+errorHandlerMiddleware
+```
+
+- instead of an unhandled promise rejection.
+
+- **Middleware order matters**
+
+- Keep:
+
+```js
+Request Context
+      ↓
+JSON Parser
+      ↓
+API Routes
+      ↓
+Error Handler
+```
+
+- The error handler should be registered after the routes.
+
+- **the request goes:**
+
+```js
+HTTP
+ │
+ ▼
+requestContextMiddleware
+ │
+ ├── requestId
+ ├── traceId
+ └── spanId
+ │
+ ▼
+express.json()
+ │
+ ▼
+apiRouter
+ │
+ ▼
+organizationRoutes
+ │
+ ▼
+validateRequest()
+ │
+ ├── params validation
+ └── body validation
+ │
+ ▼
+OrganizationController.changeStatus()
+ │
+ ▼
+OrganizationService.changeStatus()
+ │
+ ├── Organization exists?
+ ├── Lifecycle transition valid?
+ └── Business rules valid?
+ │
+ ▼
+OrganizationRepository
+ │
+ ▼
+MySQL
+```
+
+- **Error flow**
+
+```js
+- For an invalid status:
+
+{
+  "status": "INVALID"
+}
+```
+
+- Zod rejects it:
+
+```js
+Validation Middleware
+        ↓
+ValidationError
+        ↓
+asyncHandler
+        ↓
+Global Error Handler
+```
+
+- Response:
+
+```js
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": {}
+  },
+  "requestId": "req_xxx",
+  "traceId": "trc_xxx"
+}
+```
+
+- the request passes Zod but fails the service:
+
+```js
+OrganizationService
+        ↓
+LifecycleTransitionError
+        ↓
+Global Error Handler
+        ↓
+422
+```
+
+- That's an important distinction:
+
+```js
+Zod
+ ↓
+"Is this request structurally valid?"
+
+Service
+ ↓
+"Is this operation allowed?"
+```
+
+- So our architecture stays clean:
+
+```js
+Zod
+ ↓
+"Is ACTIVE a valid OrganizationStatus?"
+ ↓
+YES
+ ↓
+Service
+ ↓
+"Is ACTIVE → PENDING allowed?"
+ ↓
+NO → LifecycleTransitionError
+```
+
+**The resulting flow is:**
+
+```js
+Request
+   │
+   ├── x-request-id ──→ requestId
+   ├── x-trace-id ────→ traceId
+   │
+   └── generated ─────→ spanId
+             │
+             ▼
+      requestContext
+             │
+       ┌─────┴─────┐
+       ▼           ▼
+   Controller   Error Handler
+       │
+       ▼
+     Logger
+```
+
+- The validation layer and database uniqueness layer are doing two different jobs:
+
+```js
+
+┌──────────────────────────────┐
+│ Zod Validation               │
+│                              │
+│ Is the slug structurally     │
+│ valid?                       │
+└──────────────┬───────────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│ Organization Service         │
+│                              │
+│ Does the slug already exist? │
+└──────────────┬───────────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│ MySQL                        │
+│                              │
+│ Final uniqueness constraint  │
+└──────────────────────────────┘
+```
+
+#### STEP 2.7.5 — Project Controller & Routes
+
+- Now we'll expose Project APIs while enforcing the hierarchy:
+
+```js
+Organization
+    │
+    └── Project
+          │
+          └── Application
+                │
+                └── Environment
+```

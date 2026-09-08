@@ -29,26 +29,31 @@
 //   environmentId?: string;
 // }
 
-// export const requestContextMiddleware = (
-//   req: Request,
-//   _res: Response,
-//   next: NextFunction,
-// ): void => {
-//   const requestId = req.header("x-request-id") || generateRequestId();
-//   const traceId = req.header("x-trace-id") || generateTraceId();
-//   const spanId = generateSpanId();
+export const requestContextMiddleware = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void => {
+  const requestId = req.header("x-request-id") || generateRequestId();
+  const traceId = req.header("x-trace-id") || generateTraceId();
+  const spanId = generateSpanId();
 
-//   req.requestContext = {
-//     requestId,
-//     traceId,
-//     spanId,
-//   };
+  req.requestContext = {
+    requestId,
+    traceId,
+    spanId,
+  };
 
-//   next();
-// };
+  next();
+};
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../errors/index.js";
+import {
+  generateRequestId,
+  generateSpanId,
+  generateTraceId,
+} from "../utils/id.generrator.js";
 
 export const errorHandlerMiddleware = (
   error: unknown,

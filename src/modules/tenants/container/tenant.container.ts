@@ -11,6 +11,7 @@ import {
   ApplicationService,
   EnvironmentService,
 } from "../services/index.js";
+import { OrganizationController } from "../controllers/index.js";
 
 const organizationRepository = new OrganizationMySQLRepository();
 
@@ -20,10 +21,16 @@ const applicationRepository = new ApplicationMySQLRepository();
 
 const environmentRepository = new EnvironmentMySQLRepository();
 
+// export const organizationService = new OrganizationService(
+//   organizationRepository,
+// );
 export const organizationService = new OrganizationService(
   organizationRepository,
 );
 
+export const organizationController = new OrganizationController(
+  organizationService,
+);
 // export const projectService = new ProjectService(projectRepository);
 export const projectService = new ProjectService(
   projectRepository,

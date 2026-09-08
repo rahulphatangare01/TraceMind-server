@@ -1,19 +1,35 @@
+export interface ApiMeta {
+  [key: string]: unknown;
+}
 export interface ApiSuccessResponse<T> {
+  // success: true;
+  // data: T;
+  // requestId?: string;
+  // traceId?: string;
   success: true;
+  statusCode: number;
+  message: string;
   data: T;
-  requestId?: string;
-  traceId?: string;
+  meta?: ApiMeta;
+  requestId: string;
+  traceId: string;
+  timestamp: string;
+  path: string;
 }
 
 export interface ApiErrorResponse {
   success: false;
+  statusCode: number;
+  message: string;
   error: {
     code: string;
-    message: string;
     details?: unknown;
   };
-  requestId?: string;
-  traceId?: string;
+  meta?: ApiMeta;
+  requestId: string;
+  traceId: string;
+  timestamp: string;
+  path: string;
 }
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
