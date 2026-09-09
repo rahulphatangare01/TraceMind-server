@@ -1245,3 +1245,183 @@ Organization
                 │
                 └── Environment
 ```
+
+- **2.7.5.11 — Final architecture**
+
+```js
+                       /api/v1
+                          │
+                    Tenant Router
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+       Organizations              Projects
+              │                       │
+       Organization              Project
+       Controller                Controller
+              │                       │
+       Organization              Project
+         Service                  Service
+              │                       │
+       Organization              Project
+       Repository                Repository
+              │                       │
+              └───────────┬───────────┘
+                          ▼
+                         MySQL
+```
+
+- And importantly:
+
+```js
+Project Request
+      │
+      ├── organizationId
+      └── projectId
+             │
+             ▼
+       Service validation
+             │
+             ▼
+       Repository lookup
+             │
+             ▼
+ organizationId + projectId
+             │
+             ▼
+          MySQL
+
+```
+
+- **Expected Architecture**
+
+- At this point your tenant API structure becomes:
+
+```js
+/api/v1
+│
+└── organizations
+    │
+    └── :organizationId
+        │
+        └── projects
+            │
+            └── :projectId
+                │
+                └── applications
+                    │
+                    └── :applicationId
+```
+
+- And the request flow is:
+
+```js
+Request
+   ↓
+Request Context
+   ↓
+API Router
+   ↓
+Tenant Router
+   ↓
+Application Router
+   ↓
+mergeParams
+   ↓
+Request Validation
+   ↓
+Application Controller
+   ↓
+Application Service
+   ↓
+Repository
+   ↓
+MySQL
+
+```
+
+- **Final Environment API Structure**
+
+- Your complete tenant API is now:
+
+```js
+/api/v1/organizations
+        │
+        └── :organizationId
+              │
+              └── projects
+                    │
+                    └── :projectId
+                          │
+                          └── applications
+                                │
+                                └── :applicationId
+                                      │
+                                      └── environments
+                                            │
+                                            └── :environmentId
+```
+
+## 2.8.7 — Add Database Indexes
+
+- Projects
+
+```js
+INDEX idx_projects_organization_id (organization_id),
+INDEX idx_projects_organization_deleted (organization_id, deleted_at),
+UNIQUE KEY uq_projects_org_code (organization_id, code),
+UNIQUE KEY uq_projects_org_slug (organization_id, slug)
+```
+
+- Applications
+
+```js
+INDEX idx_applications_organization_project
+  (organization_id, project_id),
+
+INDEX idx_applications_project_deleted
+  (project_id, deleted_at),
+
+UNIQUE KEY uq_applications_project_code
+  (organization_id, project_id, code),
+
+UNIQUE KEY uq_applications_project_slug
+  (organization_id, project_id, slug)
+```
+
+- Environments
+
+```js
+INDEX idx_environments_hierarchy
+  (organization_id, project_id, application_id),
+
+INDEX idx_environments_application_deleted
+  (application_id, deleted_at),
+
+UNIQUE KEY uq_environments_application_code
+  (organization_id, project_id, application_id, code),
+
+UNIQUE KEY uq_environments_application_slug
+  (organization_id, project_id, application_id, slug)
+```
+
+## STEP 2 Completion
+
+```js
+┌─────────────────────────────────────┐
+│       TRACEMIND TENANT CORE         │
+├─────────────────────────────────────┤
+│ Organization                        │
+│   └── Project                       │
+│        └── Application              │
+│             └── Environment         │
+├─────────────────────────────────────┤
+│ Validation                          │
+│ Business Rules                      │
+│ Lifecycle Management                │
+│ Soft Delete / Restore               │
+│ Error Handling                      │
+│ Request / Trace Context             │
+│ Tenant Isolation                    │
+└─────────────────────────────────────┘
+```
