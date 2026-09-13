@@ -841,45 +841,49 @@ SECRET
 
 #### 22. Organization vs Application vs Environment isolation
 
-The important rule:
+- The important rule:
 
-A child scope must never be able to implicitly decrypt another scope's data.
+`A child scope must never be able to implicitly decrypt another scope's data.`
 
-For example:
+- For example:
 
+```js
 Organization A
 └── Application X
+```
 
-must not be able to decrypt:
+- must not be able to decrypt:
 
+```js
 Organization B
 └── Application Y
+```
 
-even if someone somehow knows the ciphertext ID.
+- even if someone somehow knows the ciphertext ID.
 
-Security Core should therefore bind encryption context to tenant context.
+- Security Core should therefore bind encryption context to tenant context.
 
-Conceptually:
+- Conceptually:
 
-decrypt(
-ciphertext,
-context
-)
+```js
+decrypt(ciphertext, context);
+```
 
-requires:
+- requires:
 
-stored context == requested context
+`stored context == requested context`
 
-and authorization must happen before decryption.
+- and authorization must happen before decryption.
 
-23. Very important: encryption is NOT authorization
+#### 23. Very important: encryption is NOT authorization
 
-We should not make this mistake:
+- We should not make this mistake:
 
-"I can decrypt it, therefore I am authorized."
+`"I can decrypt it, therefore I am authorized."`
 
-Instead:
+- Instead:
 
+```js
 Request
 ↓
 Authentication
@@ -891,19 +895,23 @@ Security Policy
 Key Selection
 ↓
 Decrypt
+```
 
-This means IAM and Security remain independent.
+- This means IAM and Security remain independent.
 
-IAM decides:
+- IAM decides:
 
-Can this principal access this secret?
+`Can this principal access this secret?`
 
-Security decides:
+- Security decides:
 
-How is that secret protected? 24. Customer-managed KMS architecture
+`How is that secret protected? `
 
-Eventually we want:
+#### 24. Customer-managed KMS architecture
 
+- Eventually we want:
+
+```js
 Customer
 │
 └── registers KMS
@@ -912,37 +920,41 @@ Customer
 ├── key reference
 ├── region
 └── credentials/config
+```
 
-Security Core stores the configuration/reference, not the customer's master key.
+- Security Core stores the configuration/reference, not the customer's master key.
 
-For example:
+- For example:
 
-## security_key_provider
+```js
+security_key_provider;
 
-id
-organization_id
-provider
-provider_key_reference
-status
-created_at
-updated_at
+id;
+organization_id;
+provider;
+provider_key_reference;
+status;
+created_at;
+updated_at;
+```
 
-Provider credentials themselves should be handled as secrets.
+- Provider credentials themselves should be handled as secrets.
 
-25. Customer KMS failure behavior
+#### 25. Customer KMS failure behavior
 
-This needs to be explicit.
+- This needs to be explicit.
 
-If:
+- If:
 
-Customer KMS unavailable
+`Customer KMS unavailable`
 
-TraceMind should not silently fall back to another key.
+- TraceMind should not silently fall back to another key.
 
-Otherwise we can accidentally violate the customer's security boundary.
+- Otherwise we can accidentally violate the customer's security boundary.
 
-Instead:
+- Instead:
 
+```js
 KMS unavailable
 ↓
 Security operation fails
@@ -950,38 +962,46 @@ Security operation fails
 controlled error
 ↓
 audit/security event
+```
 
-Availability should never silently weaken security.
+- Availability should never silently weaken security.
 
-26. Telemetry needs special treatment
+#### 26. Telemetry needs special treatment
 
-This is where we should not blindly encrypt everything.
+- This is where we should not blindly encrypt everything.
 
-TraceMind may ingest:
+- TraceMind may ingest:
 
+```js
 millions/billions of logs
 metrics
 traces
 spans
 events
+```
 
-Encrypting every field individually would have enormous performance and storage implications.
+- Encrypting every field individually would have enormous performance and storage implications.
 
-Instead, distinguish:
+- Instead, distinguish:
 
-Normal telemetry
-timestamp
-duration
-status
-service
-route
-trace_id
-span_id
-environment
+- **Normal telemetry**
 
-can generally remain searchable/indexable according to customer policy.
+```js
+timestamp;
+duration;
+status;
+service;
+route;
+trace_id;
+span_id;
+environment;
+```
 
-Sensitive telemetry
+- can generally remain searchable/indexable according to customer policy.
+
+- **Sensitive telemetry**
+
+```js
 Authorization headers
 cookies
 tokens
@@ -989,155 +1009,177 @@ passwords
 PII
 request bodies
 response bodies
+```
 
-should be:
+- should be:
 
-redacted
+`redacted`
 
-or:
+- or:
 
-encrypted
+`encrypted`
 
-depending on configuration.
+- depending on configuration.
 
-This should be a Telemetry Security Policy, not a blanket encryption rule.
+- This should be a Telemetry Security Policy, not a blanket encryption rule.
 
-27. Secret redaction should happen before storage
+#### 27. Secret redaction should happen before storage
 
-For example:
+- For example:
 
-Authorization: Bearer eyJ...
+`Authorization: Bearer eyJ...`
 
-should ideally become:
+- should ideally become:
 
-Authorization: [REDACTED]
+- Authorization: [REDACTED]
 
-before telemetry persistence.
+- before telemetry persistence.
 
-Likewise:
+- Likewise:
 
+```js
 {
 "password": "secret123"
 }
+```
 
-should become:
+- should become:
 
+```js
 {
 "password": "[REDACTED]"
 }
+```
 
-Encryption is the second line of defense.
+- Encryption is the second line of defense.
 
-Redaction is the first.
+- Redaction is the first.
 
-28. Database architecture
+#### 28. Database architecture
 
-I recommend a dedicated Security schema/domain.
+- I recommend a dedicated Security schema/domain.
 
-Conceptually:
+- Conceptually:
 
-security_key
-security_key_version
-security_key_provider
-security_secret
-security_encryption_policy
-security_audit_event
-security_data_classification
+```js
+security_key;
+security_key_version;
+security_key_provider;
+security_secret;
+security_encryption_policy;
+security_audit_event;
+security_data_classification;
+```
 
-Potentially:
+- Potentially:
 
-security_encrypted_data
+`security_encrypted_data`
 
-but preferably encrypted values remain in the domain tables that own them.
+- but preferably encrypted values remain in the domain tables that own them.
 
-For example:
+- For example:
 
-iam_user
-password_hash
+```js
+iam_user;
+password_hash;
 
-iam_api_key
-secret_hash
+iam_api_key;
+secret_hash;
 
-integration
-encrypted_credentials
+integration;
+encrypted_credentials;
 
-environment
-encrypted_configuration
+environment;
+encrypted_configuration;
+```
 
-Security Core owns the mechanism, not necessarily every encrypted business record.
+- Security Core owns the mechanism, not necessarily every encrypted business record.
 
-This keeps domains clean.
+- This keeps domains clean.
 
-29. What IAM will use
+#### 29. What IAM will use
 
-Once Security Core exists:
+- Once Security Core exists:
 
+```js
 IAM
-│
-├── Password
-│ └── Security.hashPassword()
-│
-├── API Key
-│ └── Security.hashApiKey()
-│
-├── Refresh Token
-│ └── Security.hashToken()
-│
-├── MFA Secret
-│ └── Security.encryptSecret()
-│
-└── OAuth Client Secret
-└── Security.encryptSecret()
+ │
+ ├── Password
+ │      └── Security.hashPassword()
+ │
+ ├── API Key
+ │      └── Security.hashApiKey()
+ │
+ ├── Refresh Token
+ │      └── Security.hashToken()
+ │
+ ├── MFA Secret
+ │      └── Security.encryptSecret()
+ │
+ └── OAuth Client Secret
+        └── Security.encryptSecret()
+```
 
-IAM doesn't need to know:
+- IAM doesn't need to know:
 
+```js
 AES
 KMS
 Vault
 HSM
 key version
 rotation
+```
 
-That is Security's responsibility.
+- That is Security's responsibility.
 
-30. What TraceMind telemetry/integrations will use
+#### 30. What TraceMind telemetry/integrations will use
 
-Later:
+- Later:
 
+```js
 Telemetry
 │
 ├── redaction
 ├── classification
 └── encryption policy
+```
 
-Credentials:
+- Credentials:
 
+```js
 Database Integration
 ↓
 Security.encryptSecret()
+```
 
-Webhook:
+- Webhook:
 
+```js
 Webhook secret
 ↓
 Security.secret storage
 ↓
 HMAC/signature
+```
 
-API ingestion:
+- API ingestion:
 
+```js
 API key
 ↓
 hash
 ↓
 verify
+```
 
-Everything uses the same Security Core.
+- Everything uses the same Security Core.
 
-31. Key lifecycle
+#### 31. Key lifecycle
 
-The complete lifecycle should be:
+- The complete lifecycle should be:
 
+```js
 CREATE
 ↓
 PENDING
@@ -1149,45 +1191,53 @@ DECRYPT_ONLY
 DISABLED
 ↓
 DESTROYED
+```
 
-With rotation:
+- With rotation:
 
+```js
 v1 ACTIVE
 ↓
 rotation
 ↓
 v1 DECRYPT_ONLY
 v2 ACTIVE
+```
 
-We should never immediately destroy v1 simply because v2 exists.
+- We should never immediately destroy v1 simply because v2 exists.
 
-Retention policy determines when v1 can be destroyed.
+- Retention policy determines when v1 can be destroyed.
 
-32. Key destruction is extremely serious
+#### 32. Key destruction is extremely serious
 
-If a key is destroyed:
+- If a key is destroyed:
 
+```js
 Key destroyed
 ↓
 encrypted data
 ↓
 possibly permanently unrecoverable
+```
 
-Therefore destruction should require:
+- Therefore destruction should require:
 
+```js
 authorization
 audit event
 explicit confirmation
 retention checks
 possibly waiting period
 customer policy validation
+```
 
-Especially for customer-managed KMS.
+- Especially for customer-managed KMS.
 
-33. The final architectural model
+#### 33. The final architectural model
 
-I would freeze the following model before implementation:
+- I would freeze the following model before implementation:
 
+```js
                          TRACE MIND
                              │
                     ┌────────▼────────┐
@@ -1207,59 +1257,70 @@ I would freeze the following model before implementation:
              │
        ┌─────┴──────────┐
        │                │
+   TraceMind KMS    Customer KMS
+       │                │
+       └───────┬────────┘
+               │
+          Master Keys
+               │
+            DEKs
+               │
+       Encryption Context
+               │
+   ┌───────────┼────────────┐
+   │           │            │
+Organization Project   Application/
+                           Environment
+```
 
-TraceMind KMS Customer KMS
-│ │
-└───────┬────────┘
-│
-Master Keys
-│
-DEKs
-│
-Encryption Context
-│
-┌───────────┼────────────┐
-│ │ │
-Organization Project Application/
-Environment 34. Decisions I recommend we officially freeze
-Key management
-Decision Recommendation
-Master keys KMS/provider backed
-Application encryption Envelope encryption
-Data encryption AES-256-GCM
-Key derivation from IDs No
-Tenant IDs Key-selection/context only
-DEKs Yes
-Key versions Mandatory
-Rotation New version + old decrypt-only
-Immediate re-encryption No
-Background re-encryption Yes, later
-Customer KMS Supported through provider abstraction
-Raw master key exposure Never
-KMS failure Fail closed
-Cross-tenant decryption Never
-Data protection
-Data Method
-Password Argon2id hash
-API key Hash
-Refresh token Hash
-Reset token Hash
-DB password Encrypt
-OAuth client secret Encrypt
-Webhook secret Encrypt
-MFA secret Encrypt
-Private credential Encrypt
-JWT Sign
-Webhook HMAC/sign
-Sensitive telemetry Redact/encrypt according to policy
-Normal telemetry Don't blindly encrypt everything 35. Most important architectural principle
+#### 34. Decisions I recommend we officially freeze
 
-I would put this at the top of the Security Core README:
+- **Key management**
 
-Security Core owns cryptographic protection and key lifecycle. IAM owns identity and authorization. Business modules own business data. No module directly manages cryptographic keys or low-level cryptographic operations.
+| Decision                 | Recommendation                         |
+| ------------------------ | -------------------------------------- |
+| Master keys              | KMS/provider backed                    |
+| Application encryption   | Envelope encryption                    |
+| Data encryption          | AES-256-GCM                            |
+| Key derivation from IDs  | **No**                                 |
+| Tenant IDs               | Key-selection/context only             |
+| DEKs                     | Yes                                    |
+| Key versions             | Mandatory                              |
+| Rotation                 | New version + old decrypt-only         |
+| Immediate re-encryption  | No                                     |
+| Background re-encryption | Yes, later                             |
+| Customer KMS             | Supported through provider abstraction |
+| Raw master key exposure  | Never                                  |
+| KMS failure              | Fail closed                            |
+| Cross-tenant decryption  | Never                                  |
 
-That gives us this dependency direction:
+- **Data protection**
 
+  | Data                | Method                             |
+  | ------------------- | ---------------------------------- |
+  | Password            | Argon2id hash                      |
+  | API key             | Hash                               |
+  | Refresh token       | Hash                               |
+  | Reset token         | Hash                               |
+  | DB password         | Encrypt                            |
+  | OAuth client secret | Encrypt                            |
+  | Webhook secret      | Encrypt                            |
+  | MFA secret          | Encrypt                            |
+  | Private credential  | Encrypt                            |
+  | JWT                 | Sign                               |
+  | Webhook             | HMAC/sign                          |
+  | Sensitive telemetry | Redact/encrypt according to policy |
+  | Normal telemetry    | Don't blindly encrypt everything   |
+
+#### 35. Most important architectural principle
+
+- I would put this at the top of the Security Core README:
+
+`Security Core owns cryptographic protection and key lifecycle. IAM owns identity and authorization. Business modules own business data. No module directly manages cryptographic keys or low-level cryptographic operations.`
+
+- That gives us this dependency direction:
+
+```js
                     ┌───────────────┐
                     │ Security Core │
                     └───────┬───────┘
@@ -1276,11 +1337,12 @@ That gives us this dependency direction:
              └──────────────┼──────────────┘
                             │
                        TraceMind
+```
 
-One correction to our previous roadmap: after this architecture pass, I would treat Security Core as the immediate next implementation step, but keep the full Security Product after IAM. We should not jump directly into customer-facing KMS, secret-management UI, rotation workflows, etc. yet.
+- **One correction to our previous roadmap:** after this architecture pass, I would treat **Security Core** as the **immediate next implementation** step, but keep the full Security Product after IAM. We should not jump directly into customer-facing KMS, secret-management UI, rotation workflows, etc. yet.
 
-The next implementation phase should therefore be:
+- The next implementation phase should therefore be:
 
-Security Core → Crypto abstraction → Key abstraction → Encryption envelope → Hashing → Signing/HMAC → Security context → provider interface → Local provider → tests
+- **Security Core → Crypto abstraction → Key abstraction → Encryption envelope → Hashing → Signing/HMAC → Security context → provider interface → Local provider → tests**
 
-Only after those contracts are stable should we build IAM on top of them.
+- Only after those contracts are stable should we build IAM on top of them.
