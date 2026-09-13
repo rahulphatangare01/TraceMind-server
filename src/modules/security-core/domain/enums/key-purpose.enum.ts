@@ -1,0 +1,6 @@
+export enum KeyPurpose {
+  ENCRYPTION = "ENCRYPTION",
+  KEY_WRAPPING = "KEY_WRAPPING",
+  SIGNING = "SIGNING",
+  HMAC = "HMAC",
+}

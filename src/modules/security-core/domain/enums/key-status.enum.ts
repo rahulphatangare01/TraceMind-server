@@ -1,0 +1,7 @@
+export enum KeyStatus {
+  PENDING = "PENDING",
+  ACTIVE = "ACTIVE",
+  DECRYPT_ONLY = "DECRYPT_ONLY",
+  DISABLED = "DISABLED",
+  DESTROYED = "DESTROYED",
+}
