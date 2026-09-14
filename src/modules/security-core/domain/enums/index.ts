@@ -3,6 +3,7 @@ export { KeyPurpose } from "./key-purpose.enum";
 export { KeyStatus } from "./key-status.enum";
 export { SecurityPurpose } from "./security-purpose.enum";
 export { SecurityScope } from "./security-scope.enum";
+export { CryptoEncoding } from "./encoding.enum";
 
 export { EncryptionAlgorithm } from "./encryption-algorithm.enum";
 export { HashAlgorithm } from "./hash-algorithm.enum";
