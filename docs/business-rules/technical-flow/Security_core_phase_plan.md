@@ -547,3 +547,735 @@ Key destruction contract
 ```
 
 - Only after Phase 2 is finalized should we implement the actual AES-256-GCM encryption envelope.
+
+### Phase 2 — Key Abstraction & Key Lifecycle
+
+- Now we move to the most foundational part of Security Core.
+
+- Phase 1 defined what cryptographic operations look like. Phase 2 defines `which key is used, where it comes from, how it is versioned, and how it moves through its lifecycle.`
+
+- We should still `not implement AWS KMS, Azure Key Vault, customer KMS, or the actual encryption algorithm yet.`
+
+- **1. Phase 2 objective**
+
+- At the end of this phase, the architecture should support:
+
+```js
+Security Operation
+       │
+       ▼
+Security Context
+       │
+       ▼
+Key Selection
+       │
+       ▼
+Key Reference
+       │
+       ▼
+Key Version
+       │
+       ▼
+Key Provider
+```
+
+- For example:
+
+```js
+Encrypt database credential
+        │
+        ▼
+Organization: org_123
+Application: app_456
+Purpose: DATABASE_CREDENTIAL
+Classification: SECRET
+        │
+        ▼
+select appropriate key
+        │
+        ▼
+key_organization_secret
+        │
+        ▼
+version 3
+        │
+        ▼
+provider
+```
+
+- **2. The key architecture we are freezing**
+
+- Our model will be:
+
+```js
+                 Root / Master Key
+                        │
+                        │ protects
+                        ▼
+              Data Encryption Key
+                        │
+             ┌──────────┼──────────┐
+             │          │          │
+          Secret A   Secret B   Secret C
+```
+
+- We will not derive encryption keys directly from:
+
+```js
+organizationId;
+projectId;
+applicationId;
+environmentId;
+```
+
+- Instead, these IDs are used as `security context and key-selection metadata.`
+
+- **3. Key hierarchy**
+
+- The logical hierarchy is:
+
+```js
+PLATFORM
+   │
+   ├── platform keys
+   │
+   └── ORGANIZATION
+          │
+          ├── org key
+          │
+          └── PROJECT
+                │
+                └── APPLICATION
+                      │
+                      └── ENVIRONMENT
+```
+
+- But we should `not automatically create a physical KMS key for every node.`
+
+- Instead:
+
+```js
+Logical Security Scope
+│
+▼
+Key Selection Policy
+│
+▼
+Physical Key / DEK
+```
+
+- This prevents key explosion.
+
+- **4. Key entity**
+- Important
+
+- `SecurityKey` does not contain:
+
+```js
+❌ raw key material
+❌ master key
+❌ plaintext secret
+```
+
+- It represents the logical key identity.
+
+- **5. Key version**
+
+- The important distinction:
+
+```js
+SecurityKey
+    =
+logical key
+
+SecurityKeyVersion
+    =
+specific cryptographic generation
+```
+
+- So:
+
+```js
+key_123
+   │
+   ├── v1
+   ├── v2
+   └── v3
+```
+
+- **6. Why `providerKeyReference` exists**
+
+- Suppose the provider is AWS KMS.
+
+- We don't store:
+
+`AWS master key material`
+
+- Instead:
+
+```js
+provider = AWS_KMS
+providerKeyReference = arn:aws:kms:...
+```
+
+- For Azure:
+
+```js
+provider = AZURE_KEY_VAULT
+providerKeyReference = ...
+```
+
+- For local:
+
+```js
+provider = LOCAL;
+providerKeyReference = local - key - reference;
+```
+
+- Security Core doesn't need to know the physical representation.
+
+- **7. Key status lifecycle**
+
+- We already decided:
+
+```js
+PENDING
+   │
+   ▼
+ACTIVE
+   │
+   ▼
+DECRYPT_ONLY
+   │
+   ▼
+DISABLED
+   │
+   ▼
+DESTROYED
+
+```
+
+- But we need strict transition rules.
+
+- **PENDING**
+
+- Key exists but cannot be used.
+
+- Allowed:
+
+```js
+PENDING → ACTIVE
+PENDING → DISABLED
+```
+
+- **ACTIVE**
+
+- Used for new encryption/signing operations.
+
+- Allowed:
+
+```js
+ACTIVE → DECRYPT_ONLY
+ACTIVE → DISABLED
+DECRYPT_ONLY
+```
+
+- Old version.
+
+- Allowed:
+
+`DECRYPT_ONLY → DISABLED`
+
+- **DISABLED**
+
+- No cryptographic operations.
+
+- Allowed:
+
+`DISABLED → DESTROYED`
+
+- **DESTROYED**
+
+- Terminal.
+
+`DESTROYED → nothing`
+
+- **8. Critical rule: status is not enough**
+
+- A key's status doesn't alone determine whether an operation is allowed.
+
+- We also need:
+
+```js
+Operation
++
+Key Purpose
++
+Key Status
++
+Security Context
+```
+
+- For example:
+
+```js
+ENCRYPT
+    +
+ACTIVE
+    +
+ENCRYPTION key
+    =
+allowed
+```
+
+- But:
+
+```js
+ENCRYPT
+    +
+DECRYPT_ONLY
+    =
+rejected
+```
+
+- while:
+
+```js
+DECRYPT
+    +
+DECRYPT_ONLY
+    =
+potentially allowed
+```
+
+- This distinction is essential for rotation.
+
+- **9. Key reference**
+
+- We need an abstraction that can travel between CryptoProvider and KeyProvider.
+
+- Later we may add:
+
+```js
+provider;
+purpose;
+scope;
+```
+
+- but don't duplicate information unnecessarily.
+
+- The `keyId + version` combination should uniquely identify a cryptographic key version.
+
+- **10. Key provider interface**
+
+- Now we can define the second major abstraction.
+
+- **11. Key creation request**
+
+- This means a key can be created for:
+
+```js
+PLATFORM;
+ORGANIZATION;
+PROJECT;
+APPLICATION;
+ENVIRONMENT;
+```
+
+- **12. Key-selection request**
+
+- This is more important than simply getKey().
+
+- Then:
+
+`resolveKey(request)`
+
+- returns:
+
+`KeyReference`
+
+- This gives us:
+
+```js
+Security Context
+↓
+Resolve Key
+↓
+Key Reference
+```
+
+- **13. Why resolveKey() is critical**
+
+- Imagine IAM calls:
+
+`security.encryptSecret(...)`
+
+- IAM should not have to know:
+
+```js
+Which key?
+Which version?
+Which provider?
+Where is it stored?
+```
+
+- Instead:
+
+```js
+Security Context
+↓
+KeyResolver
+↓
+KeyReference
+↓
+CryptoProvider
+```
+
+- This keeps key-management completely centralized.
+
+- **14. Key selection strategy**
+
+- For V1, I recommend deterministic logical selection:
+
+```js
+purpose
+
+- scope
+- tenant hierarchy
+```
+
+- Example:
+
+```js
+DATABASE_CREDENTIAL - APPLICATION - org_123 - app_456;
+```
+
+- resolves to:
+
+`key_app_456_database_credential`
+
+- But we should allow policy-based resolution later.
+
+- For example:
+
+```js
+SECRET
+→ organization-level key
+
+SENSITIVE telemetry
+→ application-level key
+
+HIGHLY_SENSITIVE
+→ environment-level key
+```
+
+- That belongs to the future Security Policy engine.
+
+- **15. Master key vs DEK**
+
+- We should make the relationship explicit.
+
+```js
+Provider Master Key
+│
+│ wraps
+▼
+Data Encryption Key
+│
+│ encrypts
+▼
+Application Data
+```
+
+- Security Core should never expose:
+
+`masterKey: Buffer`
+
+- to IAM.
+
+- The application gets a controlled key reference.
+
+- **16. Local provider model**
+
+- Our local implementation later can conceptually have:
+
+```js
+Local Master Key
+       │
+       └── wraps
+             │
+             ├── DEK v1
+             ├── DEK v2
+             └── DEK v3
+```
+
+- The actual storage mechanism will be decided in Phase 8.
+
+- For now, only the abstraction matters.
+
+- **17. Key rotation**
+
+- Rotation must create a new version, not overwrite the existing key.
+
+- Example:
+
+```js
+key_database_credentials
+
+v1 → ACTIVE
+```
+
+- Rotate:
+
+```js
+key_database_credentials
+
+v1 → DECRYPT_ONLY
+v2 → ACTIVE
+```
+
+- New encryption:
+
+`→ v2`
+
+- Existing ciphertext:
+
+`→ v1`
+
+- remains decryptable.
+
+- **18. Rotation API**
+
+- Conceptually:
+
+```js
+rotateKey({
+  keyId: "key_123",
+});
+```
+
+- returns:
+
+```js
+{
+keyId: "key_123",
+version: 2,
+status: "ACTIVE"
+}
+
+```
+
+- The old version becomes:
+
+`v1 = DECRYPT_ONLY `
+
+- **19. Key destruction**
+
+- We should not implement automatic destruction.
+
+- There is a major difference between:
+
+`rotation`
+
+- and:
+
+`destruction`
+
+- Rotation is normal.
+
+- Destruction can make historical data permanently unreadable.
+
+- Therefore:
+
+`destroyKey()`
+
+- will eventually require:
+
+```js
+explicit authorization
+audit event
+policy check
+retention check
+confirmation
+```
+
+- The API should exist conceptually, but actual destructive workflow belongs to the later Security Product.
+
+- **20. Provider abstraction vs key repository**
+
+- Another important distinction.
+
+- Eventually we may have:
+
+```js
+KeyRepository
+      │
+      └── stores key metadata
+
+KeyProvider
+      │
+      └── performs cryptographic key operations
+```
+
+- Don't confuse them.
+
+- For example:
+
+```js
+MySQL
+ └── key metadata
+
+AWS KMS
+ └── actual cryptographic key operations
+```
+
+- This separation will be extremely useful for customer-managed KMS.
+
+- **21. Recommended domain model**
+
+- Our final conceptual model becomes:
+
+```js
+SecurityKey
+│
+├── id
+├── purpose
+├── scope
+├── organizationId
+├── projectId
+├── applicationId
+├── environmentId
+├── provider
+├── status
+└── currentVersion
+│
+▼
+SecurityKeyVersion
+│
+├── id
+├── keyId
+├── version
+├── status
+├── providerKeyReference
+├── createdAt
+├── activatedAt
+├── rotatedAt
+├── disabledAt
+└── destroyedAt
+```
+
+- **22. Security Core dependency model after Phase 2**
+
+```js
+                 SecurityService
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+    CryptoProvider             KeyProvider
+          │                         │
+          │                    Key Resolver
+          │                         │
+          └────────────┬────────────┘
+                       │
+                Security Context
+
+```
+
+- This is the architecture we want before touching AES.
+
+- **23. Phase 2 implementation order**
+
+- We'll implement this phase in smaller checkpoints:
+
+```js
+2.1 Key domain models
+↓
+2.2 Key status lifecycle
+↓
+2.3 Key reference types
+↓
+2.4 Create/resolve key contracts
+↓
+2.5 KeyProvider interface
+↓
+2.6 Key lifecycle validation
+↓
+2.7 Key resolution rules
+↓
+2.8 Provider-independent tests
+↓
+2.9 Build + existing API regression check
+```
+
+- We should not implement LocalKeyProvider yet.
+
+- **24. Phase 2 definition of done**
+
+```js
+    PHASE 2 — KEY ABSTRACTION & LIFECYCLE
+
+[ ] SecurityKey model
+[ ] SecurityKeyVersion model
+[ ] KeyReference
+[ ] CreateKeyRequest
+[ ] ResolveKeyRequest
+[ ] KeyProvider interface
+[ ] Key lifecycle rules
+[ ] ACTIVE behavior
+[ ] DECRYPT_ONLY behavior
+[ ] DISABLED behavior
+[ ] DESTROYED terminal behavior
+[ ] Key versioning
+[ ] Key rotation contract
+[ ] Key resolution contract
+[ ] Provider reference abstraction
+[ ] No raw master key exposed
+[ ] No direct KMS implementation
+[ ] No database credential migration
+[ ] No IAM dependency
+[ ] Build passes
+[ ] Existing Tenant APIs unaffected
+
+```
+
+- **25. One architectural decision to keep in mind**
+
+- There is a subtle but important relationship between Phase 2 and Phase 3.
+
+- We currently have:
+
+```js
+SecurityContext
+↓
+ResolveKey()
+↓
+KeyReference
+↓
+CryptoProvider
+
+```
+
+- Then Phase 3 will turn the result into:
+
+```js
+Plaintext
+↓
+SecurityContext
+↓
+KeyReference
+↓
+KeyVersion
+↓
+DEK
+↓
+AES-256-GCM
+↓
+Encryption Envelope
+
+```
+
+- So Phase 2 determines the identity and lifecycle of the key; Phase 3 determines how that key is represented in encrypted data.
+
+- That separation is exactly what will let us support key rotation and customer-managed KMS later without breaking encrypted data.
+
+- Phase 2 is therefore the next implementation checkpoint.
