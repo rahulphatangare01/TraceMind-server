@@ -9,6 +9,8 @@ export interface EncryptRequest {
   algorithm: EncryptionAlgorithm;
   context: SecurityContext;
   encoding?: CryptoEncoding;
+  keyId?: string;
+  keyVersion?: number;
 }
 
 export interface EncryptResult {
@@ -40,4 +42,22 @@ export interface DecryptRequest {
 }
 export interface DecryptResult {
   plaintext: string;
+}
+
+export interface EncryptionEnvelope {
+  version: number;
+
+  algorithm: EncryptionAlgorithm;
+
+  encoding: CryptoEncoding;
+
+  keyId: string;
+
+  keyVersion: number;
+
+  iv: string;
+
+  authTag: string;
+
+  ciphertext: string;
 }

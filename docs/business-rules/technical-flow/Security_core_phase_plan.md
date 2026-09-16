@@ -1279,3 +1279,1429 @@ Encryption Envelope
 - That separation is exactly what will let us support key rotation and customer-managed KMS later without breaking encrypted data.
 
 - Phase 2 is therefore the next implementation checkpoint.
+
+### Phase 3 — Encryption / Decryption Envelope plan
+
+- **1. Phase objective**
+
+- We want this flow:
+
+```js
+                    Encrypt
+                       │
+                       ▼
+                Security Context
+                       │
+                       ▼
+                  Key Resolver
+                       │
+                       ▼
+                  Key Version
+                       │
+                       ▼
+                  Encryption Key
+                       │
+                       ▼
+                 AES-256-GCM
+                       │
+                       ▼
+              Versioned Envelope
+                       │
+                       ▼
+                   Database
+
+```
+
+- And decryption:
+
+```js
+                    Envelope
+                       │
+                       ▼
+              Parse + Validate
+                       │
+                       ▼
+              Resolve Key Version
+                       │
+                       ▼
+           Validate Security Context
+                       │
+                       ▼
+                 AES-256-GCM
+                       │
+                       ▼
+                    Plaintext
+```
+
+- **2. What we are implementing**
+
+- Phase 3 includes:
+
+```js
+[✓] AES-256-GCM
+[✓] Encryption
+[✓] Decryption
+[✓] Random IV/nonce
+[✓] Authentication tag
+[✓] Versioned envelope
+[✓] Key ID
+[✓] Key version
+[✓] Authenticated encryption context
+[✓] Envelope serialization
+[✓] Envelope validation
+[✓] Tamper detection
+[✓] Wrong-context detection
+[✓] Key rotation compatibility
+[✓] Comprehensive tests
+
+```
+
+- Still not included:
+
+```js
+[ ] AWS KMS
+[ ] Azure Key Vault
+[ ] GCP KMS
+[ ] Customer-managed KMS
+[ ] Security UI
+[ ] Automatic key rotation scheduler
+[ ] Secret-management UI
+
+```
+
+- Those remain future phases.
+
+- **3. Critical architecture decision: AES-GCM key**
+
+- There is one important implementation detail we need to preserve.
+
+- AES-256-GCM requires a `256-bit encryption key.`
+
+- That key should ultimately come from the KeyProvider architecture we designed in Phase 2.
+
+- Conceptually:
+
+```js
+SecurityKey
+│
+▼
+SecurityKeyVersion
+│
+▼
+KeyProvider
+│
+▼
+DEK
+│
+▼
+AES-256-GCM
+```
+
+- We should not do:
+
+```js
+organizationId
+↓
+SHA256
+↓
+AES key
+
+```
+
+- That violates the key architecture we already agreed on.
+
+- **4. Encryption envelope**
+
+- We need a durable envelope.
+
+- I recommend the first format:
+
+```js
+interface EncryptionEnvelope {
+version: number;
+
+algorithm: EncryptionAlgorithm;
+encoding: CryptoEncoding;
+
+keyId: string;
+keyVersion: number;
+
+iv: string;
+authTag: string;
+ciphertext: string;
+}
+
+```
+
+- Serialized example:
+
+```js
+{
+"version": 1,
+"algorithm": "AES-256-GCM",
+"encoding": "BASE64",
+"keyId": "key_123",
+"keyVersion": 2,
+"iv": "....",
+"authTag": "....",
+"ciphertext": "...."
+}
+```
+
+- **5. Why the envelope needs its own version**
+
+- Do not confuse:
+
+`envelope version`
+
+- with:
+
+`key version`
+
+- They solve different problems.
+
+**Envelope version**
+
+- Controls the serialization/cryptographic format.
+
+```js
+Envelope v1
+Envelope v2
+Envelope v3
+```
+
+**Key version**
+
+- Controls which cryptographic key was used.
+
+```js
+Key v1
+Key v2
+Key v3
+```
+
+- So we could have:
+
+```js
+Envelope v1
+    +
+Key v7
+```
+
+- This distinction is extremely important for long-term compatibility.
+
+- **6. IV / nonce**
+
+- AES-GCM requires a unique nonce/IV for every encryption operation under the same key.
+
+- For V1 we should use a 12-byte randomly generated IV.
+
+- Conceptually:
+
+`randomBytes(12)`
+
+- Every encryption gets a fresh IV:
+
+```js
+Encryption #1 → IV A
+Encryption #2 → IV B
+Encryption #3 → IV C
+```
+
+- Never reuse the IV with the same AES-GCM key.
+
+- The IV is not secret, so it can safely be stored inside the envelope.
+
+- **7. Authentication tag**
+
+- AES-GCM generates an authentication tag.
+
+- This protects against:
+
+```js
+ciphertext modification
+IV modification
+AAD/context modification
+```
+
+- If anything authenticated has changed:
+
+```js
+decrypt()
+↓
+authentication failure
+↓
+reject
+```
+
+- Never return partially decrypted plaintext.
+
+- **8. Authenticated Encryption Context**
+
+- This is one of the most important decisions in Phase 3.
+
+- AES-GCM supports `Additional Authenticated Data (AAD).`
+
+- We should use it.
+
+- Conceptually:
+
+```js
+                    AES-256-GCM
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+     plaintext       key            AAD
+                                      │
+                              Security Context
+
+```
+
+- The context is authenticated but not encrypted.
+
+- For example:
+
+```js
+
+{
+"scope": "APPLICATION",
+"organizationId": "org_123",
+"projectId": "project_456",
+"applicationId": "app_789",
+"environmentId": "env_001",
+"classification": "SECRET",
+"purpose": "DATABASE_CREDENTIAL"
+}
+
+```
+
+- This gets canonicalized and passed as AAD.
+
+- **9. Why AAD matters**
+
+- Suppose ciphertext belongs to:
+
+```js
+Organization A
+Application A
+```
+
+- Someone attempts:
+
+`decrypt(ciphertext, Organization B context)`
+
+- The context doesn't match.
+
+- AES-GCM authentication fails.
+
+- Result:
+
+`DECRYPTION FAILED`
+
+- This provides cryptographic binding between the ciphertext and its intended security context.
+
+- **10. Important security boundary**
+
+- AAD is not authorization.
+
+- The correct sequence remains:
+
+```js
+Request
+↓
+Authentication
+↓
+IAM Authorization
+↓
+Security Policy
+↓
+Context validation
+↓
+Key resolution
+↓
+Decrypt
+
+```
+
+- AAD gives us an additional cryptographic guarantee.
+
+- It does not replace IAM.
+
+- **11. Canonical security context**
+
+- We cannot simply do:
+
+`JSON.stringify(context)`
+
+- and assume the result is always canonical.
+
+- Object property ordering can become an accidental compatibility issue.
+
+- Instead, define a canonical representation.
+
+- Conceptually:
+
+```js
+scope;
+organizationId;
+projectId;
+applicationId;
+environmentId;
+classification;
+purpose;
+```
+
+- in a fixed order.
+
+- Example:
+
+```js
+APPLICATION |
+  org_123 |
+  project_456 |
+  app_789 |
+  env_001 |
+  SECRET |
+  DATABASE_CREDENTIAL;
+```
+
+- Then:
+
+```js
+canonicalContext
+↓
+UTF-8 bytes
+↓
+AES-GCM setAAD()
+```
+
+- We'll implement this through a dedicated utility/value object rather than scattered string concatenation.
+
+- **12. Do not encrypt the context into the ciphertext**
+
+- The context should generally be:
+
+```js
+authenticated
+     +
+available for validation
+```
+
+- not:
+
+`encrypted inside ciphertext`
+
+- The envelope already contains the necessary key/envelope metadata.
+
+- This also makes debugging and key migration much easier.
+
+- **13. Context information and sensitive data**
+
+- One caution:
+
+- Don't put secret values into the context.
+
+- Bad:
+
+```js
+{
+"databasePassword": "..."
+}
+
+```
+
+- Good:
+
+```js
+{
+"purpose": "DATABASE_CREDENTIAL",
+"classification": "SECRET",
+"applicationId": "app_123"
+}
+```
+
+- Context is metadata, not secret data.
+
+- **14. Encryption flow**
+
+- The final intended implementation is:
+
+```js
+plaintext
+    │
+    ▼
+Validate input
+    │
+    ▼
+Validate SecurityContext
+    │
+    ▼
+Resolve active key
+    │
+    ▼
+Generate random 12-byte IV
+    │
+    ▼
+Canonicalize context
+    │
+    ▼
+AES-256-GCM
+    │
+    ├── plaintext
+    ├── key
+    ├── IV
+    └── AAD
+    │
+    ▼
+ciphertext + authTag
+    │
+    ▼
+Create envelope
+    │
+    ▼
+Serialize
+```
+
+- **15. Decryption flow**
+
+```js
+serialized envelope
+        │
+        ▼
+parse
+        │
+        ▼
+validate envelope version
+        │
+        ▼
+validate algorithm
+        │
+        ▼
+resolve keyId + keyVersion
+        │
+        ▼
+validate key state
+        │
+        ▼
+canonicalize requested context
+        │
+        ▼
+AES-256-GCM
+        │
+        ├── ciphertext
+        ├── key
+        ├── IV
+        ├── authTag
+        └── AAD
+        │
+        ▼
+authentication
+        │
+   ┌────┴────┐
+   │         │
+ valid     invalid
+   │         │
+   ▼         ▼
+plain       error
+text
+
+```
+
+- **16. Envelope should be immutable**
+
+- Once created:
+
+`ciphertext envelope`
+
+- should never be modified in-place.
+
+- Rotation produces a new envelope:
+
+```js
+Old:
+key v1
+
+New:
+key v2
+```
+
+- This gives us reliable historical decryption.
+
+- **17. Key rotation behavior**
+
+- Suppose:
+
+`Key v1 = ACTIVE`
+
+- We encrypt:
+
+```js
+Envelope;
+keyVersion = 1;
+```
+
+- Then rotate:
+
+```js
+Key v1 = DECRYPT_ONLY
+Key v2 = ACTIVE
+```
+
+- New encryption:
+
+```
+Envelope
+keyVersion = 2
+```
+
+- Old envelope:
+
+`keyVersion = 1`
+
+- still decrypts.
+
+- That is the behavior we must test.
+
+- **18. Envelope validation**
+
+- Create a dedicated validator.
+
+- It should reject:
+
+```js
+missing version
+missing algorithm
+unsupported algorithm
+missing keyId
+invalid keyVersion
+missing IV
+invalid IV length
+missing authTag
+invalid authTag length
+missing ciphertext
+invalid encoding
+```
+
+- Don't let malformed encrypted data reach the crypto implementation.
+
+- **19. Encryption envelope types**
+
+- I'd now organize:
+
+```js
+src/modules/security-core/domain/models/
+└── encryption-envelope.ts
+```
+
+- and:
+
+```js
+src/modules/security-core/types/
+└── encryption.types.ts
+```
+
+- The domain model represents the durable envelope.
+
+- The request/result types represent application operations.
+
+- This keeps those concerns separate.
+
+- **20. Recommended EncryptionEnvelope**
+
+- Conceptually:
+
+```js
+export interface EncryptionEnvelope {
+version: number;
+
+algorithm: EncryptionAlgorithm;
+encoding: CryptoEncoding;
+
+keyId: string;
+keyVersion: number;
+
+iv: string;
+authTag: string;
+ciphertext: string;
+}
+```
+
+- Later, we can extend this with additional authenticated metadata if required.
+
+- But do not add unnecessary fields now.
+
+- **21. Serialization strategy**
+
+- We need two operations:
+
+```js
+serializeEnvelope();
+deserializeEnvelope();
+```
+
+- Conceptually:
+
+`const serialized = serializeEnvelope(envelope);`
+
+- and:
+
+`const envelope = deserializeEnvelope(serialized);`
+
+- For database storage, I recommend initially storing the serialized envelope as a single `TEXT`/appropriate string value.
+
+- Later, if telemetry requires a more efficient binary representation, we can optimize without changing the logical envelope contract.
+
+- **22. Don't expose Node.js crypto**
+
+- Even in Phase 3, this should remain hidden.
+
+- Bad:
+
+`import crypto from "node:crypto";`
+
+- throughout the application.
+
+- Only the concrete cryptographic provider/implementation should depend on Node's crypto API.
+
+- Architecture:
+
+```js
+Application
+↓
+Security Core
+↓
+CryptoProvider
+↓
+Local crypto implementation
+↓
+Node crypto
+```
+
+- **23. Error handling**
+
+- We need dedicated errors for this phase.
+
+- Recommended:
+
+```js
+InvalidEncryptionEnvelopeError;
+EncryptionFailedError;
+DecryptionFailedError;
+AuthenticationTagMismatchError;
+EncryptionContextMismatchError;
+InvalidInitializationVectorError;
+```
+
+- However, there is an important security consideration:
+
+**Don't leak cryptographic details to external API consumers.**
+
+- Internally we may distinguish:
+
+```js
+context mismatch
+bad tag
+invalid ciphertext
+```
+
+- but an external API shouldn't necessarily receive:
+
+`"authentication tag mismatch for key version 3"`
+
+- That can leak implementation information.
+
+- Our later API error mapper can convert sensitive crypto failures into controlled errors.
+
+- **24. Important: don't log plaintext**
+
+- This needs to be an explicit rule.
+
+- Never:
+
+```js
+logger.error("Decryption failed", {
+  plaintext,
+  password,
+  secret,
+});
+```
+
+- Likewise never log:
+
+```js
+raw encryption key
+DEK
+master key
+password
+API key
+refresh token
+```
+
+- Security Core should treat these values as sensitive by default.
+
+- **25. Tests we need**
+
+- Phase 3 needs much stronger tests than ordinary business code.
+
+**Basic**
+
+```js
+encrypt("hello")
+decrypt(...)
+→ "hello"
+```
+
+**Empty plaintext**
+
+- Decide and test whether:
+
+`""`
+
+- is supported.
+
+- I recommend yes, unless our application layer explicitly forbids empty secrets.
+
+**Unicode**
+
+```js
+"नमस्ते";
+"こんにちは";
+"🔐";
+```
+
+- must round-trip correctly.
+
+**Large plaintext**
+
+- Test reasonably large values to verify the implementation isn't accidentally imposing an arbitrary small limit.
+
+- **26. Tampering tests**
+
+- We must modify each component independently:
+
+```js
+ciphertext
+IV
+authTag
+keyId
+keyVersion
+context
+algorithm
+envelope version
+```
+
+- Expected:
+
+`DECRYPTION FAILURE`
+
+- **27. Wrong tenant test**
+
+- This is especially important for TraceMind.
+
+- Encrypt:
+
+```js
+org_A;
+project_A;
+application_A;
+```
+
+- Decrypt with:
+
+```js
+org_B;
+project_B;
+application_B;
+```
+
+- Expected:
+
+`REJECTED`
+
+- This becomes a critical security regression test.
+
+- **28. Rotation test**
+
+- Test:
+
+```js
+Key v1
+↓
+encrypt
+↓
+rotate
+↓
+Key v2
+```
+
+- Then:
+
+```js
+old envelope → decrypt successfully
+new encryption → uses v2
+```
+
+- This proves our envelope design works with the Phase 2 lifecycle.
+
+- **29. Provider abstraction test**
+
+- The encryption service shouldn't care whether:
+
+`LocalProvider`
+
+- or:
+
+`FutureAwsKmsProvider`
+
+- is being used.
+
+- The same contract tests should run against every provider.
+
+- This will be extremely useful later.
+
+- **30. What Phase 3 does NOT solve yet**
+
+- There are still some intentionally unresolved implementation details:
+
+**DEK wrapping**
+
+- We know the architecture:
+
+```js
+Master key
+↓
+wrap
+↓
+DEK
+```
+
+- but the exact local-provider implementation belongs to the provider phase.
+
+**Customer KMS**
+
+- Later.
+
+**Automatic rotation**
+
+- Later.
+
+**Key migration**
+
+- Later.
+
+**Secret management**
+
+- Later.
+
+- This prevents Phase 3 from becoming too large.
+
+- **31. Phase 3 implementation checkpoints**
+
+- We'll implement it in this order:
+
+```js
+3.1  EncryptionEnvelope model
+       ↓
+3.2  Envelope serializer/deserializer
+       ↓
+3.3  Envelope validation
+       ↓
+3.4  Canonical SecurityContext
+       ↓
+3.5  AES-256-GCM implementation
+       ↓
+3.6  AAD integration
+       ↓
+3.7  Encryption operation
+       ↓
+3.8  Decryption operation
+       ↓
+3.9  Key version integration
+       ↓
+3.10 Error handling
+       ↓
+3.11 Security tests
+       ↓
+3.12 Regression tests
+```
+
+- **32. Phase 3 definition of done**
+
+```js
+    PHASE 3 — ENCRYPTION / DECRYPTION ENVELOPE
+
+Envelope
+[ ] Versioned envelope
+[ ] Algorithm identifier
+[ ] Encoding identifier
+[ ] Key ID
+[ ] Key version
+[ ] IV
+[ ] Authentication tag
+[ ] Ciphertext
+[ ] Serialization
+[ ] Deserialization
+[ ] Strict validation
+
+AES-GCM
+[ ] AES-256-GCM
+[ ] 12-byte random IV
+[ ] Authentication tag
+[ ] Authenticated encryption
+[ ] No IV reuse
+
+Security Context
+[ ] Canonical context
+[ ] Context used as AAD
+[ ] Wrong context rejected
+[ ] Cross-tenant test
+
+Key lifecycle
+[ ] Active key used for encryption
+[ ] Key version stored
+[ ] Old version decrypts
+[ ] Rotation compatibility tested
+
+Security
+[ ] Tampered ciphertext rejected
+[ ] Tampered IV rejected
+[ ] Tampered tag rejected
+[ ] Invalid key rejected
+[ ] Invalid envelope rejected
+[ ] No sensitive logging
+
+
+Compatibility
+[ ] Crypto implementation behind abstraction
+[ ] No IAM dependency
+[ ] No Tenant module changes
+[ ] Existing APIs continue working
+[ ] npm build passes
+
+```
+
+- **33. Final architecture after Phase 3**
+
+- At this point our Security Core will look like:
+
+```js
+
+
+                         Security Core
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+       SecurityContext     CryptoProvider    KeyProvider
+             │                │                │
+             │                │                │
+             └────────────────┼────────────────┘
+                              │
+                       Encryption Service
+                              │
+                       ┌──────▼──────┐
+                       │ AES-256-GCM │
+                       └──────┬──────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │ EncryptionEnvelope│
+                    │                   │
+                    │ version           │
+                    │ algorithm         │
+                    │ keyId              │
+                    │ keyVersion         │
+                    │ IV                 │
+                    │ authTag            │
+                    │ ciphertext         │
+                    └───────────────────┘
+```
+
+- And the dependency direction remains:
+
+```js
+IAM
+│
+Telemetry
+│
+Integrations
+│
+Tenant
+│
+▼
+Security Core
+│
+├── CryptoProvider
+│
+└── KeyProvider
+```
+
+- One thing I would explicitly freeze before coding
+
+- The envelope format should be treated as a public internal protocol.
+
+- Once we start storing encrypted values in MySQL, changing:
+
+```js
+version;
+algorithm;
+keyId;
+keyVersion;
+IV;
+authTag;
+ciphertext;
+AAD / context;
+```
+
+- carelessly can make old data unreadable.
+
+- Therefore, when we implement Phase 3, we'll build the envelope and its tests before wiring it into any existing Tenant/IAM data.
+
+#### Encryption / Decryption Envelope plan Architecture + implementation planning only.
+
+- The sequence is:
+
+```js
+Phase 0 — Security Core Foundation
+        ↓
+     PLANNED
+        ↓
+Phase 1 — Crypto Abstraction
+        ↓
+     PLANNED
+        ↓
+Phase 2 — Key Abstraction & Lifecycle
+        ↓
+     PLANNED
+        ↓
+Phase 3 — Encryption/Decryption Envelope
+        ↓
+     PLANNED
+        ↓
+Actual coding
+```
+
+- So when you said "proceed next", I interpreted that as proceed to the next phase's design/planning, not start writing the implementation code. That's why you don't see actual Phase 3 implementation in your project.
+
+- More precisely
+
+- We have discussed and designed:
+
+- Phase 0
+
+```js
+Security Core module structure
+Security enums
+Security context
+Security errors
+module boundary
+```
+
+- Phase 1
+
+```js
+CryptoProvider
+encryption/decryption contracts
+hashing contracts
+signing contracts
+HMAC contracts
+request/result types
+```
+
+- Phase 2
+
+```js
+SecurityKey
+SecurityKeyVersion
+KeyReference
+KeyProvider
+key lifecycle
+key rotation model
+key resolution
+```
+
+- Phase 3
+
+```js
+AES-256-GCM design
+encryption envelope
+IV
+authentication tag
+key ID/version
+authenticated context/AAD
+serialization
+decryption/tamper behavior
+```
+
+- But these were design discussions, not actual implementation.
+
+- **Where we are now**
+
+- The important question is whether we should start coding Phase 3 directly.
+
+- I would say no—not yet, because we have another issue:
+
+- We need to confirm that Phase 0, Phase 1, and Phase 2 have actually been implemented in your codebase, not merely planned.
+
+- The conversation history tells me what we designed, but I don't have the current contents of your repository in this chat.
+
+- So we should distinguish:
+
+```js
+Architecture completed?
+YES
+
+Implementation completed?
+UNKNOWN
+```
+
+- And I don't want to assume that the earlier code snippets were actually added to your project.
+
+- **Therefore the safe workflow is:**
+
+```js
+CHECK CURRENT CODEBASE
+↓
+Phase 0 implemented?
+↓
+Phase 1 implemented?
+↓
+Phase 2 implemented?
+↓
+If all green
+↓
+IMPLEMENT PHASE 3
+```
+
+- This is particularly important because Phase 3 depends directly on Phase 1 and Phase 2 contracts.
+
+- If we implement AES now against assumptions and later discover that your CryptoProvider or KeyProvider differs, we'll have to rewrite it.
+
+- So, to answer your question clearly:
+
+`We have only created the plan/design for Phase 3. We have not implemented Phase 3 yet.`
+
+- And going forward, I suggest we explicitly label each response as either:
+
+`ARCHITECTURE / PLAN`
+
+- or
+  `IMPLEMENTATION`
+
+- so there is no ambiguity.
+
+- For the next step, we should verify what Phase 0–2 actually exist in your code, then begin the real Phase 3 implementation one file at a time.
+
+- **Phase 3 goal**
+
+- Implement:
+
+```js
+Plaintext
+↓
+Security Context
+↓
+Active Key
+↓
+AES-256-GCM
+↓
+IV + Auth Tag + Ciphertext
+↓
+Versioned Encryption Envelope
+```
+
+- And:
+
+```js
+Encryption Envelope
+↓
+Validate
+↓
+Resolve Key + Version
+↓
+Validate Security Context
+↓
+AES-256-GCM decrypt
+↓
+Plaintext
+```
+
+- **3.1 Directory structure**
+
+- Add the following under src/modules/security-core:
+
+```js
+security-core/
+├── application/
+│ ├── interfaces/
+│ │ ├── crypto.provider.interface.ts
+│ │ └── key.provider.interface.ts
+│ └── services/
+│
+├── domain/
+│ ├── enums/
+│ ├── models/
+│ └── value-objects/
+│
+├── providers/
+│ ├── interfaces/
+│ └── local/
+│ └── local-crypto.provider.ts
+│
+├── types/
+│ ├── encryption.types.ts
+│ └── crypto.types.ts
+│
+├── utils/
+│ ├── encryption-envelope.util.ts
+│ └── security-context.util.ts
+│
+├── errors/
+│
+├── constants/
+│ └── encryption.constants.ts
+│
+├── security-core.container.ts
+└── index.ts
+
+```
+
+3.2 AES-256-GCM constants
+
+Create:
+
+src/modules/security-core/constants/encryption.constants.ts
+export const AES_256_GCM_IV_LENGTH = 12;
+
+export const AES_256_GCM_AUTH_TAG_LENGTH = 16;
+
+export const ENCRYPTION_ENVELOPE_VERSION = 1;
+
+export const AES_256_GCM_KEY_LENGTH = 32;
+
+Why:
+
+AES-256 → 32-byte key
+GCM recommended nonce/IV → 12 bytes
+GCM authentication tag → 16 bytes
+3.3 Encryption envelope
+
+Create:
+
+src/modules/security-core/types/encryption.types.ts
+import type {
+CryptoEncoding,
+EncryptionAlgorithm,
+} from "../domain/enums/index.js";
+
+export interface EncryptionEnvelope {
+version: number;
+
+algorithm: EncryptionAlgorithm;
+
+encoding: CryptoEncoding;
+
+keyId: string;
+
+keyVersion: number;
+
+iv: string;
+
+authTag: string;
+
+ciphertext: string;
+}
+
+The important distinction is:
+
+Envelope version
+≠
+Key version
+
+For example:
+
+{
+"version": 1,
+"keyId": "key_123",
+"keyVersion": 3
+}
+
+version: 1 describes the envelope format.
+
+keyVersion: 3 identifies the cryptographic key version.
+
+3.4 Security Context canonicalization
+
+This is very important for AES-GCM AAD.
+
+We should not do:
+
+JSON.stringify(context)
+
+because object-property ordering can create inconsistent AAD.
+
+Create:
+
+src/modules/security-core/utils/security-context.util.ts
+import type { SecurityContext } from "../domain/models/security-context.model.js";
+
+export const canonicalizeSecurityContext = (
+context: SecurityContext,
+): string => {
+const values = [
+context.scope,
+context.organizationId ?? "",
+context.projectId ?? "",
+context.applicationId ?? "",
+context.environmentId ?? "",
+context.classification,
+context.purpose,
+];
+
+return values.join("|");
+};
+
+For example:
+
+ORGANIZATION
+org_123
+
+CONFIDENTIAL
+DATABASE_CREDENTIAL
+
+becomes a deterministic string such as:
+
+ORGANIZATION|org_123||||CONFIDENTIAL|DATABASE_CREDENTIAL
+
+This value will be supplied to AES-GCM as AAD.
+
+3.5 Why AAD?
+
+Suppose data was encrypted for:
+
+Organization A
+
+and someone attempts to decrypt it using:
+
+Organization B
+
+The ciphertext itself hasn't necessarily changed.
+
+But the security context changes.
+
+Because the context is authenticated through AES-GCM AAD:
+
+Context A → encryption
+Context B → decryption
+↓
+Authentication failure
+
+Therefore the encryption envelope is cryptographically bound to its intended context.
+
+Important:
+
+AAD is cryptographic integrity protection, not authorization.
+
+IAM/security policy must still decide whether the caller is allowed to decrypt.
+
+3.6 Local crypto provider
+
+Now implement the actual Node.js crypto operation.
