@@ -2907,3 +2907,31 @@ Phase 4 — Hashing
 └── 4.8 Automated tests
     └── Vitest
 ```
+
+#### Phase 4 — Hashing Implementation
+
+4.1 Hashing Types/Contracts
+4.2 + 4.3 — Implement Hashing in LocalCryptoProvider
+4.4 — Implement verifyHash()
+4.5 — Provider Integration
+4.6 — Security Core Public API
+4.7 — Manual Hash Test
+4.8 — Automated Tests
+
+### Phase 5 → Signing & HMAC
+
+```js
+5.1 Signing types/contracts
+5.2 Signature provider implementation
+5.3 Ed25519 signing
+5.4 Signature verification
+5.5 HMAC types/contracts
+5.6 HMAC creation
+5.7 HMAC verification
+5.8 Provider integration
+5.9 Security Core public API
+5.10 Manual verification
+5.11 Automated tests
+```
+
+- **Phase 5 goal**: secure digital signatures + HMAC, while keeping the architecture provider-agnostic for future KMS/HSM integration.

@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-
+import { createHash, timingSafeEqual } from "node:crypto";
+import argon2 from "argon2";
 import {
   AES_256_GCM_AUTH_TAG_LENGTH,
   AES_256_GCM_IV_LENGTH,
@@ -9,15 +10,21 @@ import {
 import {
   CryptoEncoding,
   EncryptionAlgorithm,
+  HashAlgorithm,
 } from "../../domain/enums/index.js";
-
+import type {
+  HashRequest,
+  HashResult,
+  VerifyHashRequest,
+  VerifyHashResult,
+} from "../../types/index.js";
 import {
   CryptoOperationError,
   InvalidCiphertextError,
 } from "../../errors/index.js";
 
 import { canonicalizeSecurityContext } from "../../utils/security-context.util.js";
-
+import type { CryptoProvider } from "../../application/interfaces/crypto.provider.interface.js";
 import type {
   EncryptResult,
   DecryptResult,
@@ -29,6 +36,40 @@ import type {
 } from "./local-crypto.types.js";
 
 export class LocalCryptoProvider {
+  // private getNodeHashEncoding(
+  //   encoding: CryptoEncoding,
+  // ): "hex" | "base64" | "base64url" {
+  //   switch (encoding) {
+  //     case CryptoEncoding.HEX:
+  //       return "hex";
+
+  //     case CryptoEncoding.BASE64:
+  //       return "base64";
+
+  //     case CryptoEncoding.BASE64URL:
+  //       return "base64url";
+
+  //     default:
+  //       throw new Error(`Unsupported hash encoding: ${encoding}`);
+  //   }
+  // }
+  private getNodeHashEncoding(
+    encoding: CryptoEncoding,
+  ): "hex" | "base64" | "base64url" {
+    switch (encoding) {
+      case CryptoEncoding.HEX:
+        return "hex";
+
+      case CryptoEncoding.BASE64:
+        return "base64";
+
+      case CryptoEncoding.BASE64URL:
+        return "base64url";
+
+      default:
+        throw new Error(`Unsupported hash encoding: ${encoding}`);
+    }
+  }
   async encrypt(request: LocalEncryptRequest): Promise<EncryptResult> {
     this.validateAlgorithm(request.algorithm);
 
@@ -127,7 +168,70 @@ export class LocalCryptoProvider {
       throw new InvalidCiphertextError("Unable to decrypt encrypted data");
     }
   }
+  // async hash(request: HashRequest): Promise<HashResult> {
+  //   switch (request.algorithm) {
+  //     case HashAlgorithm.ARGON2ID: {
+  //       const hash = await argon2.hash(request.value, {
+  //         type: argon2.argon2id,
+  //       });
 
+  //       return {
+  //         hash,
+  //         algorithm: HashAlgorithm.ARGON2ID,
+  //         encoding: CryptoEncoding.UTF8,
+  //       };
+  //     }
+
+  //     case HashAlgorithm.SHA_256: {
+  //       const encoding = request.encoding ?? CryptoEncoding.HEX;
+
+  //       const hash = createHash("sha256")
+  //         .update(Buffer.from(request.value, "utf8"))
+  //         .digest(this.getNodeHashEncoding(encoding));
+
+  //       return {
+  //         hash,
+  //         algorithm: HashAlgorithm.SHA_256,
+  //         encoding,
+  //       };
+  //     }
+
+  //     default:
+  //       throw new Error(`Unsupported hash algorithm: ${request.algorithm}`);
+  //   }
+  // }
+  async hash(request: HashRequest): Promise<HashResult> {
+    switch (request.algorithm) {
+      case HashAlgorithm.ARGON2ID: {
+        const hash = await argon2.hash(request.value, {
+          type: argon2.argon2id,
+        });
+
+        return {
+          hash,
+          algorithm: HashAlgorithm.ARGON2ID,
+          encoding: CryptoEncoding.UTF8,
+        };
+      }
+
+      case HashAlgorithm.SHA_256: {
+        const encoding = request.encoding ?? CryptoEncoding.HEX;
+
+        const hash = createHash("sha256")
+          .update(Buffer.from(request.value, "utf8"))
+          .digest(this.getNodeHashEncoding(encoding));
+
+        return {
+          hash,
+          algorithm: HashAlgorithm.SHA_256,
+          encoding,
+        };
+      }
+
+      default:
+        throw new Error(`Unsupported hash algorithm: ${request.algorithm}`);
+    }
+  }
   private validateAlgorithm(algorithm: EncryptionAlgorithm): void {
     if (algorithm !== EncryptionAlgorithm.AES_256_GCM) {
       throw new CryptoOperationError(
@@ -175,6 +279,79 @@ export class LocalCryptoProvider {
   private validateCiphertext(ciphertext: Buffer): void {
     if (ciphertext.length === 0) {
       throw new InvalidCiphertextError("Ciphertext cannot be empty");
+    }
+  }
+
+  // async verifyHash(request: VerifyHashRequest): Promise<VerifyHashResult> {
+  //   switch (request.algorithm) {
+  //     case HashAlgorithm.ARGON2ID: {
+  //       try {
+  //         const valid = await argon2.verify(request.hash, request.value);
+
+  //         return { valid };
+  //       } catch {
+  //         return { valid: false };
+  //       }
+  //     }
+
+  //     case HashAlgorithm.SHA_256: {
+  //       const encoding = request.encoding ?? CryptoEncoding.HEX;
+
+  //       const generatedHash = createHash("sha256")
+  //         .update(Buffer.from(request.value, "utf8"))
+  //         .digest(this.getNodeHashEncoding(encoding));
+
+  //       const expected = Buffer.from(generatedHash, "utf8");
+
+  //       const actual = Buffer.from(request.hash, "utf8");
+
+  //       if (expected.length !== actual.length) {
+  //         return { valid: false };
+  //       }
+
+  //       return {
+  //         valid: timingSafeEqual(expected, actual),
+  //       };
+  //     }
+
+  //     default:
+  //       throw new Error(`Unsupported hash algorithm: ${request.algorithm}`);
+  //   }
+  // }
+
+  async verifyHash(request: VerifyHashRequest): Promise<VerifyHashResult> {
+    switch (request.algorithm) {
+      case HashAlgorithm.ARGON2ID: {
+        try {
+          const valid = await argon2.verify(request.hash, request.value);
+
+          return { valid };
+        } catch {
+          return { valid: false };
+        }
+      }
+
+      case HashAlgorithm.SHA_256: {
+        const encoding = request.encoding ?? CryptoEncoding.HEX;
+
+        const generatedHash = createHash("sha256")
+          .update(Buffer.from(request.value, "utf8"))
+          .digest(this.getNodeHashEncoding(encoding));
+
+        const expected = Buffer.from(generatedHash, "utf8");
+        const actual = Buffer.from(request.hash, "utf8");
+
+        if (expected.length !== actual.length) {
+          return { valid: false };
+        }
+
+        return {
+          valid: timingSafeEqual(expected, actual),
+        };
+      }
+
+      default:
+        throw new Error(`Unsupported hash algorithm: ${request.algorithm}`);
     }
   }
 }
