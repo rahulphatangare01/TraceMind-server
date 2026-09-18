@@ -17,6 +17,9 @@
 
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/modules/security-core/__tests__/phase-3/manual-encryption-test.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
