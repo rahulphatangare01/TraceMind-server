@@ -2526,182 +2526,412 @@ Plaintext
 
 - **3.1 Directory structure**
 
-- Add the following under src/modules/security-core:
+- **Phase 3 architecture**
+
+- The final flow is:
 
 ```js
-security-core/
-├── application/
-│ ├── interfaces/
-│ │ ├── crypto.provider.interface.ts
-│ │ └── key.provider.interface.ts
-│ └── services/
+
+                    EncryptionService
+                           │
+                           │
+                 Resolve active key
+                           │
+                           ▼
+                     KeyProvider
+                           │
+                    Key ID + Version
+                           │
+                           ▼
+                  KeyMaterialProvider
+                           │
+                     32-byte key
+                           │
+                           ▼
+                  LocalCryptoProvider
+                           │
+                    AES-256-GCM
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+             IV         Auth Tag     Ciphertext
+              │            │            │
+              └────────────┼────────────┘
+                           ▼
+                  Encryption Envelope
+```
+
+- For decryption:
+
+```js
+Encryption Envelope
+        │
+        ▼
+Validate envelope
+        │
+        ▼
+Resolve keyId + keyVersion
+        │
+        ▼
+Get key material
+        │
+        ▼
+Recreate AAD from SecurityContext
+        │
+        ▼
+AES-256-GCM authentication
+        │
+        ├── valid → plaintext
+        │
+        └── invalid → reject
+```
+
+- The important architectural rule is:
+
+```js
+SecurityKey
+      ↓
+metadata
+
+KeyMaterialProvider
+      ↓
+actual secret key
+```
+
+- `SecurityKey` should never contain raw key material.
+
+- Therefore our Phase 3 architecture should be
+
+```js
+
+                 EncryptionService
+                        │
+                        ▼
+                Key Selection
+                        │
+                 keyId = key_x
+                        │
+                        ▼
+          KeyProvider.getActiveVersion(key_x)
+                        │
+                        ▼
+                 version = 3
+                        │
+                        ▼
+       KeyMaterialProvider.getKeyMaterial(
+                    key_x, 3
+       )
+                        │
+                        ▼
+             LocalCryptoProvider
+                        │
+                        ▼
+                  AES-256-GCM
+```
+
+- **So the current Phase 3 position is:**
+
+```js
+Phase 3
 │
-├── domain/
-│ ├── enums/
-│ ├── models/
-│ └── value-objects/
-│
-├── providers/
-│ ├── interfaces/
-│ └── local/
-│ └── local-crypto.provider.ts
-│
-├── types/
-│ ├── encryption.types.ts
-│ └── crypto.types.ts
-│
-├── utils/
-│ ├── encryption-envelope.util.ts
-│ └── security-context.util.ts
-│
-├── errors/
-│
-├── constants/
-│ └── encryption.constants.ts
-│
-├── security-core.container.ts
-└── index.ts
+├── AES-256-GCM                    ✅
+├── Encryption                     ✅
+├── Decryption                     ✅
+├── Random IV                      ✅
+├── Authentication Tag             ✅
+├── Versioned Envelope             🟡
+├── Key ID                         🟡
+├── Key Version                    🟡
+├── Authenticated Context/AAD      ✅
+├── Envelope Serialization         ✅
+├── Envelope Validation            ✅
+├── Tamper Detection               🟡 TESTING
+├── Wrong Context Detection        🟡 TESTING
+├── Key Rotation Compatibility     🟡 TESTING
+└── Comprehensive Tests             ❌
+```
+
+- The remaining work is primarily the integration + verification layer:
+
+```js
+Phase 3 remaining
+        │
+        ├── 1. Complete EncryptionService
+        │       └── keyId → getActiveVersion(keyId)
+        │
+        ├── 2. Complete envelope integration
+        │
+        ├── 3. Test tampering
+        │
+        ├── 4. Test wrong SecurityContext
+        │
+        ├── 5. Test key v1 → v2 rotation
+        │
+        └── 6. Run complete Phase 3 test suite
 
 ```
 
-3.2 AES-256-GCM constants
+### Phase 4: Encryption / Decryption Hashing.
 
-Create:
+- **Phase 4 objective**
 
-src/modules/security-core/constants/encryption.constants.ts
-export const AES_256_GCM_IV_LENGTH = 12;
+- The goal is to add hashing capabilities to Security Core without coupling them to IAM.
 
-export const AES_256_GCM_AUTH_TAG_LENGTH = 16;
+```js
+Security Core
+│
+├── Encryption ✅ Phase 3
+│
+└── Hashing ← Phase 4
+├── Password hashing
+├── Hash verification
+├── Secure salt handling
+├── Algorithm abstraction
+└── Provider independence
+```
 
-export const ENCRYPTION_ENVELOPE_VERSION = 1;
+- What we will implement
 
-export const AES_256_GCM_KEY_LENGTH = 32;
+- **1. Hashing abstraction**
 
-Why:
+- Use the existing crypto abstraction rather than calling Node `crypto` directly from business modules.
 
-AES-256 → 32-byte key
-GCM recommended nonce/IV → 12 bytes
-GCM authentication tag → 16 bytes
-3.3 Encryption envelope
+- **2. Password hashing**
 
-Create:
+- Use `Argon2id` for passwords.
 
-src/modules/security-core/types/encryption.types.ts
-import type {
-CryptoEncoding,
-EncryptionAlgorithm,
-} from "../domain/enums/index.js";
+- Important distinction:
 
-export interface EncryptionEnvelope {
-version: number;
+```js
+Password → Argon2id
+General deterministic fingerprint/integrity use cases → SHA-256 where appropriate
+Passwords should never use plain SHA-256.
+```
 
-algorithm: EncryptionAlgorithm;
+- **3. Hash result**
 
-encoding: CryptoEncoding;
+- The hash needs to retain the information required for verification, including the algorithm/configuration parameters through the standard encoded Argon2 representation.
 
-keyId: string;
+- **4. Verification**
 
-keyVersion: number;
-
-iv: string;
-
-authTag: string;
-
-ciphertext: string;
-}
-
-The important distinction is:
-
-Envelope version
-≠
-Key version
-
-For example:
-
-{
-"version": 1,
-"keyId": "key_123",
-"keyVersion": 3
-}
-
-version: 1 describes the envelope format.
-
-keyVersion: 3 identifies the cryptographic key version.
-
-3.4 Security Context canonicalization
-
-This is very important for AES-GCM AAD.
-
-We should not do:
-
-JSON.stringify(context)
-
-because object-property ordering can create inconsistent AAD.
-
-Create:
-
-src/modules/security-core/utils/security-context.util.ts
-import type { SecurityContext } from "../domain/models/security-context.model.js";
-
-export const canonicalizeSecurityContext = (
-context: SecurityContext,
-): string => {
-const values = [
-context.scope,
-context.organizationId ?? "",
-context.projectId ?? "",
-context.applicationId ?? "",
-context.environmentId ?? "",
-context.classification,
-context.purpose,
-];
-
-return values.join("|");
-};
-
-For example:
-
-ORGANIZATION
-org_123
-
-CONFIDENTIAL
-DATABASE_CREDENTIAL
-
-becomes a deterministic string such as:
-
-ORGANIZATION|org_123||||CONFIDENTIAL|DATABASE_CREDENTIAL
-
-This value will be supplied to AES-GCM as AAD.
-
-3.5 Why AAD?
-
-Suppose data was encrypted for:
-
-Organization A
-
-and someone attempts to decrypt it using:
-
-Organization B
-
-The ciphertext itself hasn't necessarily changed.
-
-But the security context changes.
-
-Because the context is authenticated through AES-GCM AAD:
-
-Context A → encryption
-Context B → decryption
+```js
+Plain password
 ↓
-Authentication failure
+Hash
+↓
+Stored hash
+↓
+Verify(password, storedHash)
+↓
+true / false
+```
 
-Therefore the encryption envelope is cryptographically bound to its intended context.
+- **5. Security rules**
 
-Important:
+```js
+Never log plaintext passwords.
+Never decrypt a password hash.
+Hashing is one-way.
+Different password hashes should normally differ because of unique salts.
+Verification must use the parameters embedded in the stored hash.
+IAM will consume this capability later.
+```
 
-AAD is cryptographic integrity protection, not authorization.
+- **Phase 4 boundary**
 
-IAM/security policy must still decide whether the caller is allowed to decrypt.
+- We should not implement yet:
 
-3.6 Local crypto provider
+```js
+Login/authentication
+User registration
+IAM password policies
+MFA
+JWT
+Sessions
+Signing
+HMAC
+Key management changes
+```
 
-Now implement the actual Node.js crypto operation.
+- Those belong to later phases.
+
+- **Phase 4 implementation sequence**
+
+```js
+4.1 → Hashing types/contracts
+4.2 → Hash provider implementation
+4.3 → Argon2id password hashing
+4.4 → Hash verification
+4.5 → Provider integration
+4.6 → Security Core public API
+4.7 → Manual verification test
+4.8 → Automated tests
+```
+
+- **Phase 4 implementation we will build**
+
+```js
+Phase 4 — Hashing
+│
+├── 4.1 Hashing types/contracts
+│   ├── HashAlgorithm
+│   ├── HashRequest
+│   └── HashResult
+│
+├── 4.2 Hash provider implementation
+│   └── HashProvider / LocalHashProvider
+│
+├── 4.3 Argon2id password hashing
+│   ├── random salt
+│   ├── Argon2id
+│   └── secure parameters
+│
+├── 4.4 Hash verification
+│   └── verify plaintext against stored hash
+│
+├── 4.5 Provider integration
+│   └── Security Core provider wiring
+│
+├── 4.6 Security Core public API
+│   └── exports
+│
+├── 4.7 Manual verification test
+│   ├── hash
+│   ├── verify
+│   └── different hashes for same password
+│
+└── 4.8 Automated tests
+    ├── valid password
+    ├── invalid password
+    ├── unique salt
+    ├── malformed hash
+    └── algorithm validation
+
+```
+
+- **Important architectural decision**
+
+- We will not modify or replace your existing CryptoProvider contract.
+
+Instead:
+
+```js
+CryptoProvider
+      │
+      ├── Encryption       ✅ Phase 3
+      ├── Hashing          ← Phase 4
+      ├── Signing          → Phase 5
+      └── HMAC             → Phase 5
+```
+
+- For password hashing:
+
+```js
+Password
+   ↓
+Argon2id
+   ↓
+Salt + parameters
+   ↓
+Encoded password hash
+   ↓
+Database later
+```
+
+And later IAM will simply consume Security Core:
+
+```js
+IAM
+ ↓
+Security Core
+ ↓
+hash / verifyHash
+```
+
+**Phase 4 architecture**
+
+```js
+CryptoProvider
+│
+├── encrypt()          ✅ Phase 3
+├── decrypt()          ✅ Phase 3
+│
+├── hash()             ← Phase 4
+├── verifyHash()       ← Phase 4
+│
+├── sign()             ← Phase 5
+├── verifySignature()  ← Phase 5
+├── createHmac()       ← Phase 5
+└── verifyHmac()       ← Phase 5
+```
+
+And the implementation will be:
+
+```js
+EncryptionService
+       ↓
+CryptoProvider
+       ↓
+LocalCryptoProvider
+       ↓
+Argon2id
+```
+
+- **Phase 4 implementation plan**
+
+- We will implement all 4.1 → 4.8:
+
+```js
+Phase 4 — Hashing
+│
+├── 4.1 Hashing contracts/types        ✅ Already available
+│
+├── 4.2 Hash implementation
+│   └── LocalCryptoProvider.hash()
+│
+├── 4.3 Argon2id password hashing
+│   └── argon2 package
+│
+├── 4.4 Hash verification
+│   └── LocalCryptoProvider.verifyHash()
+│
+├── 4.5 Provider integration
+│   └── security-core.container.ts
+│
+├── 4.6 Public API
+│   └── index.ts exports
+│
+├── 4.7 Manual test
+│   └── hash → verify
+│
+└── 4.8 Automated tests
+    └── Vitest
+```
+
+#### Phase 4 — Hashing Implementation
+
+4.1 Hashing Types/Contracts
+4.2 + 4.3 — Implement Hashing in LocalCryptoProvider
+4.4 — Implement verifyHash()
+4.5 — Provider Integration
+4.6 — Security Core Public API
+4.7 — Manual Hash Test
+4.8 — Automated Tests
+
+### Phase 5 → Signing & HMAC
+
+```js
+5.1 Signing types/contracts
+5.2 Signature provider implementation
+5.3 Ed25519 signing
+5.4 Signature verification
+5.5 HMAC types/contracts
+5.6 HMAC creation
+5.7 HMAC verification
+5.8 Provider integration
+5.9 Security Core public API
+5.10 Manual verification
+5.11 Automated tests
+```
+
+- **Phase 5 goal**: secure digital signatures + HMAC, while keeping the architecture provider-agnostic for future KMS/HSM integration.

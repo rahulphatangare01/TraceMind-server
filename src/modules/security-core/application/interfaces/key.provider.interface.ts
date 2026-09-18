@@ -22,7 +22,6 @@ import type {
 
 export interface ResolveKeyRequest {
   purpose: KeyPurpose;
-
   scope: SecurityScope;
 
   organizationId?: string;

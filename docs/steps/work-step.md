@@ -80,5 +80,34 @@ Domain Error Handling                 ✅
 Lifecycle Rules                       ✅
 
 2.7.1
-API Response Standard                 ← CURRENT
+API Response Standard                  ✅
+```
+
+Phase 4 implementation
+
+```js
+4.1 → Hashing types/contracts         ✅
+4.2 → Hash provider implementation    ✅
+4.3 → Argon2id password hashing       ✅
+4.4 → Hash verification               ✅
+4.5 → Provider integration            ✅
+4.6 → Security Core public API        ✅
+4.7 → Manual verification test   - npx tsx src/modules/security-core/__tests__/phase-4/manual-hashing-test.ts
+4.8 → Automated tests         - npx vitest run src/modules/security-core/__tests__/phase-4/local-hashing.spec.ts
+```
+
+- Phase 5 → Signing & HMAC
+
+```js
+5.1 Signing types/contracts
+5.2 Signature provider implementation
+5.3 Ed25519 signing
+5.4 Signature verification
+5.5 HMAC types/contracts
+5.6 HMAC creation
+5.7 HMAC verification
+5.8 Provider integration
+5.9 Security Core public API
+5.10 Manual verification
+5.11 Automated tests
 ```

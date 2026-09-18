@@ -1,7 +1,4 @@
 export const AES_256_GCM_IV_LENGTH = 12;
-
 export const AES_256_GCM_AUTH_TAG_LENGTH = 16;
-
-export const ENCRYPTION_ENVELOPE_VERSION = 1;
-
 export const AES_256_GCM_KEY_LENGTH = 32;
+export const ENCRYPTION_ENVELOPE_VERSION = 1;

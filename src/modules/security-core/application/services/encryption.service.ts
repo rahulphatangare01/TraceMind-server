@@ -1,65 +1,90 @@
-// async encrypt(
-//   plaintext: string,
-//   context: SecurityContext,
-// ): Promise<string> {
-//   validateSecurityContext(context);
+import { EncryptionAlgorithm, KeyPurpose } from "../../domain/enums/index.js";
+import type { SecurityContext } from "../../domain/models";
+import type { KeyProvider } from "../interfaces/key.provider.interface.js";
+import type { LocalCryptoProvider } from "../../providers/local/local-crypto.provider.js";
+import { ENCRYPTION_ENVELOPE_VERSION } from "../../constants/encryption.constants.js";
+import {
+  parseEncryptionEnvelope,
+  serializeEncryptionEnvelope,
+} from "../../utils/encryption-envelope.util.js";
+import { KeyMaterialProvider } from "../../providers/interfaces/key-material.provider.interface.js";
+import { KeyNotFoundError } from "../../errors/key-not-found.error.js";
 
-//   const key = await this.keyProvider.resolveActiveKey({
-//     ...context,
-//     purpose: KeyPurpose.ENCRYPTION,
-//   });
+export class EncryptionService {
+  constructor(
+    private readonly keyProvider: KeyProvider,
+    private readonly keyMaterialProvider: KeyMaterialProvider,
+    private readonly cryptoProvider: LocalCryptoProvider,
+  ) {}
 
-//   const result = await this.cryptoProvider.encrypt({
-//     plaintext,
-//     algorithm: EncryptionAlgorithm.AES_256_GCM,
-//     context,
-//   });
+  async encrypt(
+    plaintext: string,
+    context: SecurityContext,
+    keyId: string,
+  ): Promise<string> {
+    const key = await this.keyProvider.getActiveVersion(keyId);
+    if (!key) {
+      throw new KeyNotFoundError(keyId);
+    }
 
-//   const envelope: EncryptionEnvelope = {
-//     version: ENCRYPTION_ENVELOPE_VERSION,
-//     algorithm: result.algorithm,
-//     encoding: result.encoding,
-//     keyId: result.keyId,
-//     keyVersion: result.keyVersion,
-//     iv: result.iv,
-//     authTag: result.authTag,
-//     ciphertext: result.ciphertext,
-//   };
+    const keyMaterial = await this.keyMaterialProvider.getKeyMaterial(
+      keyId,
+      key.version,
+    );
 
-//   return JSON.stringify(envelope);
-// }
+    const result = await this.cryptoProvider.encrypt({
+      plaintext,
+      algorithm: EncryptionAlgorithm.AES_256_GCM,
+      context,
+      keyId,
+      keyVersion: key.version,
+      keyMaterial,
+    });
 
-// Decryption service
+    return serializeEncryptionEnvelope({
+      version: ENCRYPTION_ENVELOPE_VERSION,
+      algorithm: result.algorithm,
+      encoding: result.encoding,
+      keyId: result.keyId,
+      keyVersion: result.keyVersion,
+      iv: result.iv,
+      authTag: result.authTag,
+      ciphertext: result.ciphertext,
+    });
+  }
 
-// async decrypt(
-//   serializedEnvelope: string,
-//   context: SecurityContext,
-// ): Promise<string> {
-//   const envelope =
-//     parseEncryptionEnvelope(serializedEnvelope);
+  async decrypt(
+    encryptedValue: string,
+    context: SecurityContext,
+  ): Promise<string> {
+    const envelope = parseEncryptionEnvelope(encryptedValue);
 
-//   validateSecurityContext(context);
+    const key = await this.keyProvider.getKeyVersion({
+      keyId: envelope.keyId,
+      version: envelope.keyVersion,
+    });
 
-//   const key = await this.keyProvider.getKeyVersion({
-//     keyId: envelope.keyId,
-//     version: envelope.keyVersion,
-//   });
+    if (!key) {
+      throw new KeyNotFoundError(`${envelope.keyId}:v${envelope.keyVersion}`);
+    }
 
-//   if (!key) {
-//     throw new KeyNotFoundError(
-//       envelope.keyId,
-//       envelope.keyVersion,
-//     );
-//   }
+    const keyMaterial = await this.keyMaterialProvider.getKeyMaterial(
+      envelope.keyId,
+      envelope.keyVersion,
+    );
 
-//   return this.cryptoProvider.decrypt({
-//     ciphertext: envelope.ciphertext,
-//     algorithm: envelope.algorithm,
-//     encoding: envelope.encoding,
-//     iv: envelope.iv,
-//     authTag: envelope.authTag,
-//     keyId: envelope.keyId,
-//     keyVersion: envelope.keyVersion,
-//     context,
-//   });
-// }
+    const result = await this.cryptoProvider.decrypt({
+      ciphertext: envelope.ciphertext,
+      algorithm: envelope.algorithm,
+      encoding: envelope.encoding,
+      iv: envelope.iv,
+      authTag: envelope.authTag,
+      keyId: envelope.keyId,
+      keyVersion: envelope.keyVersion,
+      context,
+      keyMaterial,
+    });
+
+    return result.plaintext;
+  }
+}
