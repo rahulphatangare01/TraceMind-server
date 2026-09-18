@@ -2935,3 +2935,477 @@ Phase 4 — Hashing
 ```
 
 - **Phase 5 goal**: secure digital signatures + HMAC, while keeping the architecture provider-agnostic for future KMS/HSM integration.
+
+- **Goal**
+
+- Build a provider-agnostic cryptographic layer for:
+
+```js
+Digital signatures → Ed25519
+Signature verification
+HMAC generation → HMAC-SHA-256
+HMAC verification
+Secure encoding and validation
+Integration with the existing CryptoProvider
+Tests and manual verification
+```
+
+##### Phase 5 Implementation Plan
+
+- **5.1 — Signing Types / Contracts**
+
+- Create/verify:
+
+```js
+types/
+├── signing.types.ts
+└── hmac.types.ts
+```
+
+- Signing
+
+```js
+SignRequest;
+SignResult;
+VerifySignatureRequest;
+VerifySignatureResult;
+```
+
+- HMAC
+
+```js
+CreateHmacRequest;
+CreateHmacResult;
+VerifyHmacRequest;
+VerifyHmacResult;
+```
+
+We'll define exactly what goes into each request/result before implementation.
+
+- **5.2 — Cryptographic Constants**
+
+- Add:
+
+```js
+constants/
+└── signing.constants.ts
+```
+
+- Define:
+
+```js
+ED25519
+HMAC-SHA-256
+signature encoding
+HMAC encoding
+```
+
+We should avoid hardcoding algorithm names throughout the provider.
+
+- **5.3 — Signing Algorithm**
+
+- Implement `Ed25519` using Node's native:
+
+`node:crypto`
+
+Flow:
+
+```js
+
+Message
+   ↓
+Private Key
+   ↓
+Ed25519 Sign
+   ↓
+Signature
+```
+
+Verification:
+
+```js
+Message
+   ↓
+Public Key + Signature
+   ↓
+Ed25519 Verify
+   ↓
+true / false
+```
+
+Important:
+
+- Ed25519 signing is different from hashing.
+
+- Hashing:
+
+`password → hash`
+
+- Signing:
+
+`message + privateKey → signature`
+
+- Architecture
+
+```js
+SignRequest
+    ↓
+LocalCryptoProvider
+    ↓
+Signing Key Provider
+    ↓
+Private Key
+    ↓
+Ed25519
+    ↓
+SignResult
+```
+
+- system different cryptographic purposes:
+
+```js
+AES-256-GCM
+    → symmetric encryption key
+
+HMAC
+    → symmetric secret
+
+Ed25519
+    → asymmetric private/public key pair
+```
+
+This separation will make future KMS/HSM integration much cleaner.
+
+- **5.4 — Signing Key Handling**
+
+- We need to decide how Phase 5 obtains keys.
+
+For the current Security Core:
+
+```js
+LocalCryptoProvider
+       ↓
+KeyMaterialProvider
+       ↓
+Local implementation
+```
+
+However, private/public signing keys must not be treated exactly like AES encryption keys.
+
+We'll introduce the appropriate abstraction rather than putting private keys directly inside `LocalCryptoProvider`.
+
+For development:
+
+`Local Signing Key Provider`
+
+Later:
+
+```js
+AWS KMS
+Azure Key Vault
+GCP KMS
+HashiCorp Vault
+HSM
+```
+
+- **5.5 — Signature Verification**
+
+Implement:
+
+`verifySignature()`
+
+Test cases will include:
+
+```js
+Correct message + correct signature       → true
+Modified message + signature              → false
+Wrong public key                           → false
+Malformed signature                        → false
+```
+
+```js
+Sign
+  ↓
+Signature
+  ↓
+Verify
+  ↓
+true
+
+Modified payload
+  ↓
+Verify
+  ↓
+false
+
+Wrong key
+  ↓
+Verify
+  ↓
+false
+```
+
+- **5.6 — HMAC Types / Contracts**
+
+Implement:
+
+```js
+CreateHmacRequest;
+CreateHmacResult;
+
+VerifyHmacRequest;
+VerifyHmacResult;
+```
+
+Algorithm:
+
+`HMAC-SHA-256`
+
+- Flow:
+
+```js
+Message + Secret
+      ↓
+   HMAC-SHA-256
+      ↓
+    HMAC
+
+```
+
+```js
+CreateHmacRequest
+       │
+       ├── payload
+       ├── algorithm
+       └── SecurityContext
+              │
+              ▼
+       HmacKeyProvider
+              │
+              ├── secret
+              ├── keyId
+              └── keyVersion
+              │
+              ▼
+        HMAC-SHA-256
+              │
+              ▼
+       CreateHmacResult
+```
+
+- **5.7 — HMAC Implementation**
+
+Use Node:
+
+`createHmac()`
+
+For verification, use:
+
+`timingSafeEqual()`
+
+This is important because HMAC comparison should not use a normal string comparison for security-sensitive verification.
+
+```js
+VerifyHmacRequest
+       │
+       ├── keyId
+       └── keyVersion
+              ↓
+     HmacKeyProvider
+              ↓
+       exact HMAC key
+              ↓
+       HMAC-SHA-256
+              ↓
+       timingSafeEqual
+              ↓
+        true / false
+```
+
+- **5.8 — Update LocalCryptoProvider**
+
+After all Phase 5 operations exist:
+
+`export class LocalCryptoProvider implements CryptoProvider`
+
+will finally become valid.
+
+Complete provider:
+
+```js
+LocalCryptoProvider
+│
+├── encrypt() ✅
+├── decrypt() ✅
+├── hash() ✅
+├── verifyHash() ✅
+├── sign() 🆕
+├── verifySignature() 🆕
+├── createHmac() 🆕
+└── verifyHmac() 🆕
+```
+
+- **5.9 — Security Core Public API**
+
+Update:
+
+`security-core/index.ts`
+
+to expose the Phase 5 contracts/enums/providers that are intended to be public.
+
+- **5.10 — Manual Verification**
+
+Create:
+
+```js
+__tests__/
+└── phase-5/
+    └── manual-signing-hmac-test.ts
+```
+
+Verify:
+
+**Ed25519**
+
+```js
+Generate keys
+↓
+Sign message
+↓
+Verify signature
+↓
+Modify message
+↓
+Verification fails
+```
+
+**HMAC**
+
+```js
+Create HMAC
+↓
+Verify correct message
+↓
+true
+
+Modify message
+↓
+false
+
+```
+
+- **5.11 — Automated Tests**
+
+- Create separate tests:
+
+```js
+__tests__/
+└── phase-5/
+    ├── local-signing.spec.ts
+    └── local-hmac.spec.ts
+```
+
+Expected coverage:
+
+**Signing**
+
+```js
+1. Sign message
+2. Signature is generated
+3. Same message can be verified
+4. Modified message fails
+5. Wrong public key fails
+6. Malformed signature fails
+7. Different messages produce different signatures
+8. Unsupported algorithm fails
+```
+
+**HMAC**
+
+```js
+1. Create HMAC
+2. Correct value verifies
+3. Incorrect value fails
+4. Modified message fails
+5. Same message + same secret produces same HMAC
+6. Different secret produces different HMAC
+7. HEX encoding
+8. BASE64 encoding
+9. Malformed HMAC fails
+10. Unsupported algorithm fails
+```
+
+- **Final Phase 5 Structure**
+
+After completion, the Security Core should look approximately like:
+
+```js
+security-core/
+│
+├── application/
+│ ├── interfaces/
+│ │ ├── crypto.provider.interface.ts
+│ │ ├── key.provider.interface.ts
+│ │ └── signing-key.provider.interface.ts
+│ │
+│ └── services/
+│ └── encryption.service.ts
+│
+├── constants/
+│ ├── encryption.constants.ts
+│ └── signing.constants.ts
+│
+├── domain/
+│ ├── enums/
+│ │ ├── encryption-algorithm.enum.ts
+│ │ ├── hash-algorithm.enum.ts
+│ │ ├── signing-algorithm.enum.ts
+│ │ └── hmac-algorithm.enum.ts
+│ │
+│ └── models/
+│
+├── providers/
+│ ├── interfaces/
+│ │ ├── key-material.provider.interface.ts
+│ │ └── signing-key.provider.interface.ts
+│ │
+│ └── local/
+│ ├── local-key.provider.ts
+│ ├── local-key-material.provider.ts
+│ └── local-crypto.provider.ts
+│
+├── types/
+│ ├── encryption.types.ts
+│ ├── encryption-envelope.types.ts
+│ ├── hashing.types.ts
+│ ├── signing.types.ts
+│ └── hmac.types.ts
+│
+├── errors/
+│
+├── utils/
+│
+├── **tests**/
+│ └── phase-5/
+│ ├── local-signing.spec.ts
+│ ├── local-hmac.spec.ts
+│ └── manual-signing-hmac-test.ts
+│
+└── index.ts
+```
+
+```js
+                    securityCore
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+ KeyProvider      SigningKeyProvider   HmacKeyProvider
+        │                │                │
+        └────────────────┼────────────────┘
+                         ↓
+                 LocalCryptoProvider
+                         │
+          ┌──────────────┼──────────────┐
+          ↓              ↓              ↓
+      Encryption       Hashing       Signing/HMAC
+```

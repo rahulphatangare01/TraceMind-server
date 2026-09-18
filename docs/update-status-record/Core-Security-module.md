@@ -48,3 +48,36 @@
 5.10 Manual verification
 5.11 Automated tests
 ```
+
+- **Testing Command**
+
+- phase 5
+
+npx vitest run src/modules/security-core/**tests**/phase-5/local-hmac.spec.ts
+npx tsx src/modules/security-core/**tests**/phase-5/manual-hmac-test.ts
+npx tsx src/modules/security-core/**tests**/phase-5/manual-security-core-test.ts
+npx vitest run src/modules/security-core/**tests**/phase-5/local-signing.spec.ts
+npx vitest run src/modules/security-core/**tests**/phase-5/local-hmac.spec.ts
+npm run type-check
+npm run test:security
+
+- **PHASE 6 → Security Context**
+
+```js
+PHASE 6 → Security Context
+
+6.1  → Review SecurityContext model
+6.2  → Define SecurityScope rules
+6.3  → Define hierarchy validation
+6.4  → Define required IDs per scope
+6.5  → Define context validation schema
+6.6  → Implement SecurityContextValidator
+6.7  → Implement context normalization
+6.8  → Implement canonical context generation
+6.9  → Context equality / comparison
+6.10 → Context security boundary validation
+6.11 → Integrate Context with Crypto operations
+6.12 → Automated tests
+6.13 → Manual verification
+6.14 → Phase 6 hardening/review
+```
