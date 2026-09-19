@@ -3409,3 +3409,1107 @@ security-core/
           ↓              ↓              ↓
       Encryption       Hashing       Signing/HMAC
 ```
+
+### PHASE 6 → Security Context
+
+- **1. Phase Objective**
+
+The objective of Phase 6 is to make SecurityContext a strong, validated security boundary for the entire Security Core.
+
+After Phase 6, every security-sensitive operation should be able to answer:
+
+`Which tenant/resource does this operation belong to, what sensitivity level does the data have, and what security purpose is the operation serving?`
+
+The target architecture is:
+
+```js
+                          SecurityContext
+                           │
+          ┌────────────────┼────────────────┐
+          ↓                ↓                ↓
+       Scope         Classification      Purpose
+          │                │                │
+          ↓                ↓                ↓
+ Organization       SENSITIVE          DATABASE_CREDENTIAL
+ Project             SECRET            API_KEY
+ Application         HIGHLY_SENSITIVE   REFRESH_TOKEN
+ Environment         CONFIDENTIAL       SIGNING
+```
+
+This context will eventually be consumed by:
+
+```js
+Encryption
+Hashing
+Signing
+HMAC
+Key Management
+Secrets
+Security Policies
+Audit
+KMS
+Telemetry Security
+```
+
+- **2. Phase 6 Architecture**
+
+The architecture we want is:
+
+```js
+                    ┌─────────────────────┐
+                    │   SecurityContext   │
+                    └──────────┬──────────┘
+                               │
+                               ↓
+                    ┌─────────────────────┐
+                    │ Context Validator   │
+                    └──────────┬──────────┘
+                               │
+                               ↓
+                    ┌─────────────────────┐
+                    │ Context Normalizer  │
+                    └──────────┬──────────┘
+                               │
+                               ↓
+                    ┌─────────────────────┐
+                    │ Canonical Context   │
+                    └──────────┬──────────┘
+                               │
+             ┌─────────────────┼─────────────────┐
+             ↓                 ↓                 ↓
+        Encryption          Signing            HMAC
+
+```
+
+The important principle:
+
+- Security Context should be centralized.
+
+We don't want individual services doing their own validation like:
+
+```js
+if (!organizationId) ...
+if (!projectId) ...
+```
+
+Instead:
+
+```js
+SecurityContext
+↓
+SecurityContextValidator
+↓
+Validated SecurityContext
+↓
+Security operation
+```
+
+- **3. Phase 6 Detailed Roadmap**
+
+Here is the complete trackable plan.
+
+- **PHASE 6.1 → SecurityContext Contract Review**
+
+- Objective
+
+Review and freeze the existing `SecurityContext` contract before introducing validation.
+
+- Existing model
+
+```js
+interface SecurityContext {
+scope: SecurityScope;
+
+organizationId?: string;
+projectId?: string;
+applicationId?: string;
+environmentId?: string;
+
+classification: DataClassification;
+purpose: SecurityPurpose;
+}
+```
+
+- Tasks
+
+```js
+- Review current interface.
+- Review SecurityScope.
+- Review DataClassification.
+- Review SecurityPurpose.
+- Check existing Phase 3–5 usage.
+- Identify backward-compatibility requirements.
+- Confirm whether fields should remain optional at the raw contract level.
+- Define the difference between:
+       - raw context
+       - validated context
+       - normalized context.
+```
+
+- Deliverable
+
+Frozen SecurityContext contract.
+
+- Status
+
+`6.1 ⬜ Not Started`
+
+- **PHASE 6.2 → Security Scope Rules**
+  Objective
+
+Define exactly what each scope means.
+
+- Expected scopes:
+
+```js
+PLATFORM;
+ORGANIZATION;
+PROJECT;
+APPLICATION;
+ENVIRONMENT;
+FIELD;
+```
+
+Conceptually:
+
+```js
+PLATFORM
+   │
+   └── Organization
+          │
+          └── Project
+                 │
+                 └── Application
+                        │
+                        └── Environment
+                               │
+                               └── Field
+```
+
+- Define rules
+
+For example:
+
+- PLATFORM
+
+```js
+organizationId → not required
+projectId → not required
+applicationId → not required
+environmentId → not required
+```
+
+- ORGANIZATION
+
+```js
+organizationId → required
+projectId → absent
+applicationId → absent
+environmentId → absent
+```
+
+- PROJECT
+
+```js
+organizationId → required
+projectId → required
+applicationId → absent
+environmentId → absent
+```
+
+- APPLICATION
+
+```js
+organizationId → required
+projectId → required
+applicationId → required
+environmentId → optional
+```
+
+- ENVIRONMENT
+
+```js
+organizationId → required
+projectId → required
+applicationId → required
+environmentId → required
+```
+
+- FIELD
+
+Field scope needs special consideration because field-level security may eventually require additional information such as:
+
+```js
+resource;
+entity;
+field;
+```
+
+We should not invent those fields yet without reviewing the existing model.
+
+- Deliverable
+
+Formal scope matrix.
+
+- Status
+  `6.2 ⬜ Not Started`
+
+- **PHASE 6.3 → Hierarchy Validation Rules**
+
+- Objective
+
+Ensure the context cannot represent an invalid hierarchy.
+
+Example:
+
+```js
+projectId exists
+BUT
+organizationId missing
+```
+
+should be invalid.
+
+Similarly:
+
+```js
+environmentId exists
+BUT
+applicationId missing
+```
+
+should be invalid.
+
+Expected hierarchy:
+
+```js
+Environment
+↓ requires
+Application
+↓ requires
+Project
+↓ requires
+Organization
+```
+
+- Validate
+
+```js
+Parent IDs.
+Child IDs.
+Scope consistency.
+No orphan context.
+No invalid combinations.
+```
+
+- Example invalid context
+
+```js
+{
+scope: SecurityScope.PROJECT,
+projectId: "project-123",
+classification: ...,
+purpose: ...
+}
+```
+
+if `organizationId` is mandatory for project scope.
+
+- Deliverable
+
+Hierarchy validation rules.
+
+- Status
+  `6.3 ⬜ Not Started`
+
+- **PHASE 6.4 → Required/Forbidden Context Fields**
+
+This is related to 6.3 but should be explicitly defined.
+
+For every scope we determine:
+
+```js
+Required fields
+Optional fields
+Forbidden fields
+```
+
+Example:
+
+| Scope        | Organization | Project  | Application | Environment |
+| ------------ | ------------ | -------- | ----------- | ----------- |
+| PLATFORM     | —            | —        | —           | —           |
+| ORGANIZATION | Required     | —        | —           | —           |
+| PROJECT      | Required     | Required | —           | —           |
+| APPLICATION  | Required     | Required | Required    | Optional    |
+| ENVIRONMENT  | Required     | Required | Required    | Required    |
+
+This matrix becomes the source of truth for validation.
+
+- Deliverable
+
+Scope-field policy matrix.
+
+- Status
+  `6.4 ⬜ Not Started`
+
+- **PHASE 6.5 → SecurityContext Zod Schema**
+
+- Objective
+
+Introduce runtime validation.
+
+Because TypeScript only validates at compile time.
+
+Security Context can come from:
+
+```js
+API requests
+SDKs
+background jobs
+event consumers
+internal services
+configuration
+future plugins
+```
+
+Therefore runtime validation is necessary.
+
+Expected location:
+
+```js
+src/modules/security-core/schemas/
+└── security-context.schema.ts
+```
+
+Potential structure:
+
+```js
+const securityContextSchema = z.object({
+scope: ...,
+organizationId: ...,
+projectId: ...,
+applicationId: ...,
+environmentId: ...,
+classification: ...,
+purpose: ...,
+});
+```
+
+But scope-dependent validation should not be handled only by a static schema.
+
+We will combine:
+
+```js
+Zod structural validation
+       +
+Business/security validation
+```
+
+- Deliverable
+
+Runtime SecurityContext schema.
+
+- Status
+  `6.5 ⬜ Not Started`
+
+- **PHASE 6.6 → SecurityContextValidator**
+
+- Objective
+
+Create the central validator.
+
+Expected location:
+
+```js
+src/modules/security-core/application/services/
+└── security-context-validator.service.ts
+```
+
+Responsibilities:
+
+```js
+Validate structure
+↓
+Validate scope
+↓
+Validate hierarchy
+↓
+Validate required IDs
+↓
+Validate forbidden IDs
+↓
+Validate classification
+↓
+Validate purpose
+↓
+Return validated context
+
+```
+
+- Example API:
+
+```js
+validate(
+context: SecurityContext,
+): ValidatedSecurityContext
+```
+
+Potentially:
+
+`validateOrThrow(...)`
+
+depending on the existing error architecture.
+
+Important
+
+This service should not:
+
+```js
+authenticate users
+check IAM permissions
+query organizations
+check database ownership
+```
+
+Those belong to later layers.
+
+Phase 6 validates the shape and security semantics of the context, not authorization.
+
+- Deliverable
+
+Central context validator.
+
+- Status
+  `6.6 ⬜ Not Started`
+
+- **PHASE 6.7 → Context Normalization**
+
+- Objective
+
+Make equivalent contexts produce the same normalized representation.
+
+For example:
+
+`" org-123 "`
+
+should not behave differently from:
+
+`"org-123"`
+
+if our contract allows trimming.
+
+We need to define normalization rules carefully.
+
+Potential rules:
+
+```js
+Trim IDs
+Normalize empty values
+Normalize optional fields
+Preserve enum values
+Avoid accidental case transformation
+```
+
+Important:
+
+We should not blindly lowercase IDs.
+
+IDs may be case-sensitive depending on the future implementation.
+
+Example
+
+Input:
+
+```js
+{
+scope: ORGANIZATION,
+organizationId: " org-123 ",
+projectId: undefined,
+...
+}
+```
+
+Normalized:
+
+```js
+{
+scope: ORGANIZATION,
+organizationId: "org-123",
+...
+}
+```
+
+- Deliverable
+
+`normalizeSecurityContext().`
+
+- Status
+
+`6.7 ⬜ Not Started`
+
+- **PHASE 6.8 → Canonical Context**
+
+We already have:
+
+`canonicalizeSecurityContext()`
+
+Currently:
+
+```js
+[
+  context.scope,
+  context.organizationId ?? "",
+  context.projectId ?? "",
+  context.applicationId ?? "",
+  context.environmentId ?? "",
+  context.classification,
+  context.purpose,
+].join("|");
+```
+
+Phase 6 should formally define this behavior.
+
+- Objective
+
+Guarantee deterministic representation.
+
+For example:
+
+`ORGANIZATION|org-123||||SENSITIVE|API_KEY`
+
+must always produce the same canonical value.
+
+This is important because canonical context is used by:
+
+```js
+AES-GCM AAD
+↓
+Integrity binding
+```
+
+and eventually:
+
+```js
+Signing
+HMAC
+Audit correlation
+Security policy evaluation
+```
+
+- Tasks
+
+```js
+Review delimiter safety.
+Normalize before canonicalization.
+Define field ordering.
+Define null/undefined behavior.
+Test deterministic output.
+Test equivalent normalized contexts.
+```
+
+- Deliverable
+
+Stable canonicalization utility.
+
+- Status
+  `6.8 ⬜ Not Started`
+
+- **PHASE 6.9 → Context Equality / Comparison**
+
+- Objective
+
+Provide a reliable way to determine whether two security contexts represent the same security boundary.
+
+Potential utility:
+
+```js
+areSecurityContextsEqual(contextA, contextB);
+```
+
+Conceptually:
+
+```js
+Context A
+↓
+normalize
+↓
+canonicalize
+
+Context B
+↓
+normalize
+↓
+canonicalize
+
+       ↓
+
+compare
+
+```
+
+This will be useful later for:
+
+```js
+Cache keys
+Security policies
+Encryption context checks
+Audit
+Key selection
+Request context
+Multi-tenant isolation
+```
+
+- Deliverable
+
+Context comparison utility.
+
+- Status
+
+`6.9 ⬜ Not Started`
+
+- **PHASE 6.10 → Security Boundary Validation**
+
+This is one of the most important parts.
+
+- Objective
+
+Ensure a context cannot accidentally cross security boundaries.
+
+Example:
+
+```js
+Organization A
+↓
+Project A
+```
+
+must never accidentally become:
+
+```js
+Organization B
+↓
+Project A
+```
+
+At this phase we can validate context consistency, but not ownership from DB.
+
+There are two levels:
+
+- Level 1 — Structural
+
+`PROJECT requires organizationId`
+
+- Level 2 — Resource ownership
+
+`Does projectId actually belong to organizationId?`
+
+The second requires persistence/repository access and should `not be implemented inside Security Core Phase 6.`
+
+It belongs later when Security Services integrate with the Multi-Tenant foundation.
+
+- Deliverable
+
+Security boundary rules and clear responsibility separation.
+
+- Status
+  `6.10 ⬜ Not Started`
+
+- **PHASE 6.11 → Integrate Context With Crypto Operations**
+
+Now we connect the validated context to the existing crypto system.
+
+- Current:
+
+```js
+EncryptionService
+↓
+CryptoProvider
+↓
+SecurityContext
+```
+
+We want:
+
+```js
+Raw Context
+↓
+Validator
+↓
+Normalizer
+↓
+Validated Context
+↓
+Crypto Operation
+```
+
+- Operations:
+
+```js
+Encryption
+Decryption
+Signing
+Signature Verification
+HMAC
+HMAC Verification
+```
+
+Important
+
+We should avoid unnecessarily changing the public contracts created in Phases 3–5.
+
+Instead, introduce the context validation at the appropriate service/provider boundary.
+
+We will inspect the actual current implementation before deciding exactly where.
+
+- Deliverable
+
+All Security Core security-sensitive operations use validated context.
+
+- Status
+
+`6.11 ⬜ Not Started`
+
+- **PHASE 6.12 → Automated Tests**
+
+This phase needs comprehensive testing.
+
+I recommend approximately 25–35 test cases.
+
+- A. Scope tests
+
+```js
+PLATFORM context valid
+ORGANIZATION context valid
+PROJECT context valid
+APPLICATION context valid
+ENVIRONMENT context valid
+```
+
+- B. Missing parent tests
+
+```js
+PROJECT without organization → false
+APPLICATION without project → false
+ENVIRONMENT without application → false
+```
+
+- C. Invalid extra fields
+
+```js
+ORGANIZATION + projectId → false
+PROJECT + applicationId → false
+APPLICATION + invalid environment combination → false
+```
+
+- D. Classification tests
+
+```js
+valid classification
+invalid classification
+```
+
+- E. Purpose tests
+
+```js
+valid purpose
+invalid purpose
+```
+
+- F. Normalization tests
+
+```js
+trim IDs
+empty values
+undefined values
+
+```
+
+- G. Canonicalization tests
+
+```js
+same context → same canonical string
+different context → different canonical string
+```
+
+- H. Equality tests
+
+```js
+same context → true
+different organization → false
+different project → false
+different classification → false
+different purpose → false
+```
+
+- I. Crypto integration tests
+
+Verify that Phase 6 doesn't break:
+
+```js
+Encryption
+Decryption
+Signing
+Verification
+HMAC
+HMAC verification
+```
+
+- Deliverable
+
+Full Phase 6 automated suite.
+
+- Status
+  `6.12 ⬜ Not Started`
+
+- **PHASE 6.13 → Manual Verification**
+
+Create:
+
+```js
+src/modules/security-core/**tests**/phase-6/
+└── manual-security-context-test.ts
+```
+
+Verify real-world scenarios.
+
+Example:
+
+```js
+Organization API key
+Project database credential
+Application OAuth secret
+Production refresh token
+Platform signing operation
+```
+
+Then verify invalid scenarios.
+
+- Deliverable
+
+Manual verification script.
+
+- Status
+
+`6.13 ⬜ Not Started`
+
+- **PHASE 6.14 → Hardening & Architecture Review**
+
+Final review before moving forward.
+
+We verify:
+
+- Architecture
+
+```js
+No circular dependency
+No IAM dependency
+No database dependency
+No direct Node crypto dependency from business modules
+```
+
+- Security
+
+```js
+Default deny
+Invalid context rejected
+No accidental tenant crossing
+Canonicalization deterministic
+No secret values logged
+```
+
+- Compatibility
+
+```js
+Phase 3 → PASS
+Phase 4 → PASS
+Phase 5 → PASS
+Phase 6 → PASS
+```
+
+- TypeScript
+  `npm run type-check`
+
+- Security tests
+
+`npm run test:security`
+
+- Build
+
+`npm run build`
+
+- Deliverable
+
+Phase 6 sign-off.
+
+- Status
+  `6.14 ⬜ Not Started`
+
+- **4. Complete Phase 6 Tracking Sheet**
+
+- You can keep this as your master checklist:
+
+```js
+╔══════════════════════════════════════════════════════════╗
+║ PHASE 6 — SECURITY CONTEXT ║
+╚══════════════════════════════════════════════════════════╝
+
+6.1 SecurityContext Contract Review
+⬜
+
+6.2 Security Scope Rules
+⬜
+
+6.3 Hierarchy Validation Rules
+⬜
+
+6.4 Required / Forbidden Context Fields
+⬜
+
+6.5 SecurityContext Zod Schema
+⬜
+
+6.6 SecurityContextValidator
+⬜
+
+6.7 Context Normalization
+⬜
+
+6.8 Canonical Context
+⬜
+
+6.9 Context Equality / Comparison
+⬜
+
+6.10 Security Boundary Validation
+⬜
+
+6.11 Crypto Operation Integration
+⬜
+
+6.12 Automated Tests
+⬜
+
+6.13 Manual Verification
+⬜
+
+6.14 Hardening & Architecture Review
+
+⬜
+```
+
+- **5. What Phase 6 Will NOT Do**
+
+This is equally important.
+
+We should not expand Phase 6 unnecessarily.
+
+- Not in Phase 6
+
+```js
+❌ IAM
+❌ Authentication
+❌ Authorization
+❌ RBAC
+❌ UBAC
+❌ User management
+❌ Key Management UI
+❌ Secret Management
+❌ Database persistence
+❌ AWS KMS
+❌ Azure Key Vault
+❌ GCP KMS
+❌ Customer-managed KMS
+❌ Security Dashboard
+❌ Security policies engine
+❌ Audit database
+```
+
+Those belong to later phases.
+
+- **6. Final Security Core Architecture After Phase 6**
+
+Once Phase 6 is finished, our Security Core should conceptually look like:
+
+```js
+                         TraceMind
+                            │
+                            ↓
+                  ┌──────────────────┐
+                  │  Security Core   │
+                  └────────┬─────────┘
+                           │
+                           ↓
+                 ┌─────────────────────┐
+                 │ Security Context    │
+                 │                     │
+                 │ Scope               │
+                 │ Classification      │
+                 │ Purpose             │
+                 │ Resource hierarchy  │
+                 └──────────┬──────────┘
+                            │
+                            ↓
+                 ┌─────────────────────┐
+                 │ Context Validator   │
+                 └──────────┬──────────┘
+                            │
+                            ↓
+                 ┌─────────────────────┐
+                 │ Normalizer          │
+                 └──────────┬──────────┘
+                            │
+                            ↓
+                 ┌─────────────────────┐
+                 │ Canonicalizer       │
+                 └──────────┬──────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          ↓                 ↓                 ↓
+     Encryption          Signing            HMAC
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            ↓
+                    Provider Abstraction
+
+```
+
+This gives us a strong foundation for the next stages:
+
+```js
+Phase 6
+Security Context
+↓
+Phase 7
+Provider Architecture
+↓
+Phase 8
+Local Provider
+↓
+Phase 9
+Security Service / Public API
+↓
+Phase 10
+Testing + Hardening
+↓
+Phase 11+
+Full TraceMind Security Product
+```
+
+- Current overall progress
+
+```js
+PHASE 0 → Foundation ✅
+PHASE 1 → Crypto Abstraction ✅
+PHASE 2 → Key Abstraction ✅
+PHASE 3 → Encryption Envelope ✅
+PHASE 4 → Hashing ✅
+PHASE 5 → Signing & HMAC ✅
+PHASE 6 → Security Context 🔵 NEXT
+PHASE 7 → Provider Architecture ⬜
+PHASE 8 → Local Provider ⬜
+PHASE 9 → Security Service/API ⬜
+PHASE 10 → Hardening ⬜
+```
+
+- Recommended next action: start only with 6.1 — SecurityContext Contract Review.
