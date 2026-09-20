@@ -81,3 +81,24 @@ PHASE 6 → Security Context
 6.13 → Manual verification
 6.14 → Phase 6 hardening/review
 ```
+
+- Testing Command for phase 6
+
+```js
+npx vitest run src/modules/security-core/__tests__/phase-6/security-scope.rules.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-hierarchy.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-fields.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context.schema.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-validator.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-normalization.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-canonicalization.spec.ts
+npx tsx src/modules/security-core/__tests__/phase-6/manual/security-context-comparison.manual.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-context-comparison.spec.ts
+npx tsx src/modules/security-core/__tests__/phase-6/manual/security-boundary-validation.manual.ts
+npx vitest run src/modules/security-core/__tests__/phase-6/security-boundary-validator.spec.ts
+npx tsx src/modules/security-core/__tests__/phase-6/manual/crypto-operation-context.manual.ts
+
+
+All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
+npm run type-check
+```

@@ -52,9 +52,9 @@ export class LocalKeyProvider implements KeyProvider {
       createdAt: now,
       updatedAt: now,
     };
-
     this.keys.set(keyId, key);
 
+    // const keyId = key.id;
     const version: SecurityKeyVersion = {
       id: crypto.randomUUID(),
       keyId,

@@ -29,6 +29,11 @@ import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.pro
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
 
+import { SecurityContextValidator } from "./application/services/security-context-validator.service.js";
+import { SigningService } from "./application/services/signing.service.js";
+import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
+import { HmacService } from "./application/services/hmac.service.js";
+// import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
 const keyProvider = new LocalKeyProvider();
 
 const keyMaterialProvider = new LocalKeyMaterialProvider();
@@ -36,24 +41,34 @@ const keyMaterialProvider = new LocalKeyMaterialProvider();
 const signingKeyProvider = new LocalSigningKeyProvider();
 
 const hmacKeyProvider = new LocalHmacKeyProvider();
+const securityBoundaryValidator = new SecurityBoundaryValidator();
 
 const cryptoProvider = new LocalCryptoProvider(
   signingKeyProvider,
   hmacKeyProvider,
 );
+const signingService = new SigningService(
+  cryptoProvider,
+  securityBoundaryValidator,
+);
+
+const hmacService = new HmacService(cryptoProvider, securityBoundaryValidator);
+const securityContextValidator = new SecurityContextValidator();
 
 export const securityCore = {
   keyProvider,
   keyMaterialProvider,
-
+  securityBoundaryValidator,
   signingKeyProvider,
   hmacKeyProvider,
-
   cryptoProvider,
-
+  securityContextValidator,
+  signingService,
+  hmacService,
   encryptionService: new EncryptionService(
     keyProvider,
     keyMaterialProvider,
     cryptoProvider,
+    securityBoundaryValidator,
   ),
 };
