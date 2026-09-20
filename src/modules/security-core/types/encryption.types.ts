@@ -10,18 +10,10 @@ export interface EncryptRequest {
   context: SecurityContext;
   encoding?: CryptoEncoding;
   keyId?: string;
+  keyVersion: number;
 }
 
 export interface EncryptResult {
-  // ciphertext: string;
-  // algorithm: EncryptionAlgorithm;
-  // encoding: CryptoEncoding;
-
-  // iv: string;
-  // authTag: string;
-
-  // keyId: string;
-  // keyVersion: number;
   ciphertext: string;
   algorithm: EncryptionAlgorithm;
   encoding: CryptoEncoding;

@@ -6,3 +6,6 @@ export * from "./invalid-key-state.error.js";
 export * from "./crypto-operation.error.js";
 export * from "./invalid-ciphertext.error.js";
 export * from "./unsupported-algorithm.error.js";
+
+export * from "./security-context-validation.error.js";
+export * from "./security-boundary-validation.error.js";

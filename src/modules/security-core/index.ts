@@ -11,3 +11,14 @@ export * from "./providers/interfaces/key-material.provider.interface.js";
 export * from "./providers/interfaces/signing-key.provider.interface.js";
 export * from "./providers/interfaces/hmac-key.provider.interface.js";
 export * from "./security-core.container.js";
+
+export * from "./schemas/security-context.schema.js";
+export * from "./application/services/security-context-validator.service.js";
+// export * from "./utils/security-context-normalization.util.js";
+// export * from "./utils/security-context-comparison.util.js";
+export * from "./utils/security-context.util.js";
+export * from "./utils/security-context-normalization.util.js";
+export * from "./utils/security-context-comparison.util.js";
+
+export * from "./types/security-boundary.types.js";
+export * from "./application/services/security-boundary-validator.service.js";
