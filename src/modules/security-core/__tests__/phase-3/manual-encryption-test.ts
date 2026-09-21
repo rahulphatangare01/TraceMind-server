@@ -125,6 +125,7 @@ import {
   SecurityPurpose,
   KeyPurpose,
 } from "../../domain/enums/index.js";
+import { SecurityBoundaryValidator } from "../../application/services/security-boundary-validator.service.js";
 
 const main = async (): Promise<void> => {
   const plaintext = "Hello TraceMind";
@@ -146,6 +147,7 @@ const main = async (): Promise<void> => {
   const keyMaterialProvider = new LocalKeyMaterialProvider();
 
   const cryptoProvider = new LocalCryptoProvider();
+  const securityBoundaryValidator = new SecurityBoundaryValidator();
 
   /**
    * ----------------------------------------------------
@@ -157,6 +159,7 @@ const main = async (): Promise<void> => {
     keyProvider,
     keyMaterialProvider,
     cryptoProvider,
+    securityBoundaryValidator,
   );
 
   /**

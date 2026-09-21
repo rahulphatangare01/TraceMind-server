@@ -497,7 +497,7 @@ import { LocalKeyProvider } from "../../providers/local/local-key.provider.js";
 import { LocalKeyMaterialProvider } from "../../providers/local/local-key-material.provider.js";
 import { LocalSigningKeyProvider } from "../../providers/local/local-signing-key.provider.js";
 import { LocalHmacKeyProvider } from "../../providers/local/local-hmac-key.provider.js";
-
+import { SecurityBoundaryValidationError } from "../../errors/security-boundary-validation.error.js";
 describe("Phase 6.11 - Crypto Operation Security Context Integration", () => {
   const organizationId = "org-001";
   const projectId = "project-001";
@@ -619,7 +619,7 @@ describe("Phase 6.11 - Crypto Operation Security Context Integration", () => {
         invalidContext,
         "unused-key-id",
       ),
-    ).rejects.toBeInstanceOf(SecurityContextValidationError);
+    ).rejects.toBeInstanceOf(SecurityBoundaryValidationError);
   });
 
   // =========================================================
@@ -917,8 +917,11 @@ describe("Phase 6.11 - Crypto Operation Security Context Integration", () => {
       purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
     };
 
+    // expect(() => securityBoundaryValidator.validate(invalidContext)).toThrow(
+    //   SecurityContextValidationError,
+    // );
     expect(() => securityBoundaryValidator.validate(invalidContext)).toThrow(
-      SecurityContextValidationError,
+      SecurityBoundaryValidationError,
     );
   });
 
@@ -987,8 +990,11 @@ describe("Phase 6.11 - Crypto Operation Security Context Integration", () => {
       purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
     };
 
+    // expect(() => securityBoundaryValidator.validate(invalidContext)).toThrow(
+    //   SecurityContextValidationError,
+    // );
     expect(() => securityBoundaryValidator.validate(invalidContext)).toThrow(
-      SecurityContextValidationError,
+      SecurityBoundaryValidationError,
     );
   });
 });
