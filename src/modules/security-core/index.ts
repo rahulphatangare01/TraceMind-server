@@ -22,3 +22,4 @@ export * from "./utils/security-context-comparison.util.js";
 
 export * from "./types/security-boundary.types.js";
 export * from "./application/services/security-boundary-validator.service.js";
+export * from "./application/interfaces/security.provider.interface.js";

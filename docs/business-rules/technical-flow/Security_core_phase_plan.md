@@ -4513,3 +4513,904 @@ PHASE 10 → Hardening ⬜
 ```
 
 - Recommended next action: start only with 6.1 — SecurityContext Contract Review.
+
+### Phase 7 — Provider Architecture
+
+- **1. Phase 7 objective**
+
+- Current architecture is approximately:
+
+```js
+Security Core
+     │
+     ├── EncryptionService
+     │
+     ├── KeyProvider
+     │
+     ├── KeyMaterialProvider
+     │
+     └── Local Providers
+             │
+             └── Node.js crypto
+```
+
+- The problem we need to solve is provider coupling.
+
+- Phase 7 should evolve this toward:
+
+```js
+                         Security Core
+                              │
+                    Application Services
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+          Provider Contracts        Provider Registry
+                 │                         │
+       ┌─────────┼─────────┬───────────────┤
+       │         │         │               │
+       ▼         ▼         ▼               ▼
+     LOCAL      AWS      AZURE           GCP
+    Provider    KMS      Key Vault        KMS
+       │         │         │               │
+       ▼         ▼         ▼               ▼
+   Node.js     AWS API   Azure API       GCP API
+
+```
+
+- The application layer should not know which provider is being used.
+
+- **2. What Phase 7 should NOT do**
+
+- This is important.
+
+- Phase 7 should not yet implement:
+
+```js
+AWS KMS
+Azure Key Vault
+GCP KMS
+HashiCorp Vault
+Customer KMS
+HSM
+Database persistence
+IAM
+RBAC
+Secrets management UI
+Security dashboard
+Security policies
+Key rotation automation
+```
+
+- Those belong to later phases.
+
+- Phase 7 creates the provider architecture and contracts that make those future implementations possible.
+
+- **3. Current provider architecture to preserve**
+
+- From the current Security Core implementation, we already have:
+
+```js
+KeyProvider;
+KeyMaterialProvider;
+CryptoProvider;
+SigningKeyProvider;
+HmacKeyProvider;
+```
+
+- And Local implementations:
+
+```js
+LocalKeyProvider;
+LocalKeyMaterialProvider;
+LocalCryptoProvider;
+LocalSigningKeyProvider;
+LocalHmacKeyProvider;
+```
+
+We should not unnecessarily replace these contracts.
+
+Instead, Phase 7 should formalize how they work together.
+
+- **4. Phase 7 implementation roadmap**
+
+I recommend:
+
+```js
+7.1 Provider Architecture Contract
+7.2 Provider Capability Model
+7.3 Provider Identity & Metadata
+7.4 Provider Lifecycle
+7.5 Provider Registry
+7.6 Provider Resolver
+7.7 Provider Factory
+7.8 Local Provider Adapter
+7.9 Provider Configuration
+7.10 Provider Validation
+7.11 Provider Error Model
+7.12 Provider Isolation Tests
+7.13 Provider Switching Tests
+7.14 Backward Compatibility Tests
+7.15 Security Review
+7.16 Type-check / Build / Regression
+7.17 Phase 7 Documentation
+
+```
+
+Let's define each carefully.
+
+- **5. Phase 7.1 — Provider Architecture Contract**
+
+**Objective**
+
+Freeze the architectural boundaries before writing implementation code.
+
+Define:
+
+```js
+Provider
+Provider Type
+Provider Capability
+Provider Configuration
+Provider Metadata
+Provider Lifecycle
+Provider Registry
+Provider Resolver
+Provider Factory
+```
+
+- Core rule
+
+Application services should depend on interfaces:
+
+```js
+interface EncryptionService {
+...
+}
+```
+
+and:
+
+`Provider interface`
+
+not:
+
+```js
+LocalCryptoProvider;
+LocalKeyProvider;
+```
+
+- Acceptance criteria
+
+```js
+✓ No business service directly depends on Local provider
+✓ Provider contracts are explicit
+✓ Provider implementation can be replaced
+✓ Existing Phase
+ 6 behavior remains unchanged
+```
+
+**7.1 architecture**
+
+- After this step:
+
+```js
+                    Security Core
+                         │
+                  Provider Contract
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+     Metadata       Capabilities       Status
+        │                │                │
+        └────────────────┼────────────────┘
+                         │
+                Existing Contracts
+                         │
+       ┌─────────┬───────┼────────┬──────────┐
+       ▼         ▼       ▼        ▼          ▼
+     Crypto     Key    KeyMaterial Signing   HMAC
+   Provider   Provider   Provider  Provider Provider
+```
+
+- **6. Phase 7.2 — Provider Capability Model**
+
+Not every provider will support every operation.
+
+For example:
+
+```js
+LOCAL
+├── encryption ✓
+├── decryption ✓
+├── hashing ✓
+├── signing ✓
+└── HMAC ✓
+
+AWS KMS
+├── key management ✓
+├── encryption ✓
+├── signing ✓
+├── hashing ✗
+└── HMAC depends on architecture
+
+```
+
+Therefore we should introduce a capability model.
+
+Example concept:
+
+```js
+enum ProviderCapability {
+ENCRYPTION = "ENCRYPTION",
+DECRYPTION = "DECRYPTION",
+HASHING = "HASHING",
+SIGNING = "SIGNING",
+HMAC = "HMAC",
+KEY_MANAGEMENT = "KEY_MANAGEMENT",
+KEY_ROTATION = "KEY_ROTATION",
+}
+```
+
+Don't assume every provider implements everything.
+
+- 7.2.1 Architecture
+
+```js
+                    Security Provider
+                           │
+                           ▼
+                  Provider Capability Set
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+   Key Management     Encryption          Signing
+        │                  │                  │
+        ▼                  ▼                  ▼
+     supported          supported          supported
+```
+
+- 7.2.2 Design rule
+
+We need three different concepts:
+
+```js
+Provider Type
+    ↓
+"What provider is this?"
+
+Provider Capability
+    ↓
+"What can this provider do?"
+
+Provider Status
+    ↓
+"Is this provider currently usable?"
+```
+
+Example:
+
+```js
+Type: AWS_KMS;
+
+Capabilities: ENCRYPTION;
+DECRYPTION;
+SIGNING;
+KEY_MANAGEMENT;
+
+Status: READY;
+```
+
+Do not combine these concepts.
+
+- **7. Phase 7.3 — Provider Identity & Metadata**
+
+We need a standardized provider identity.
+
+For example:
+
+```js
+interface ProviderMetadata {
+id: string;
+name: string;
+type: ProviderType;
+version: string;
+capabilities: ProviderCapability[];
+}
+```
+
+Provider types could initially be:
+
+```js
+enum ProviderType {
+LOCAL = "LOCAL",
+AWS_KMS = "AWS_KMS",
+AZURE_KEY_VAULT = "AZURE_KEY_VAULT",
+GCP_KMS = "GCP_KMS",
+HASHICORP_VAULT = "HASHICORP_VAULT",
+CUSTOM = "CUSTOM",
+}
+```
+
+Important
+
+At Phase 7, these are architectural provider types.
+
+We do not need to implement all providers.
+
+- **8. Phase 7.4 — Provider Lifecycle**
+
+Providers need lifecycle management.
+
+Define:
+
+```js
+REGISTERED
+↓
+INITIALIZING
+↓
+READY
+↓
+UNHEALTHY
+↓
+DISABLED
+```
+
+Potential lifecycle:
+
+```js
+enum ProviderStatus {
+REGISTERED = "REGISTERED",
+INITIALIZING = "INITIALIZING",
+READY = "READY",
+UNHEALTHY = "UNHEALTHY",
+DISABLED = "DISABLED",
+}
+```
+
+This will become important for enterprise deployments.
+
+- **9. Phase 7.5 — Provider Registry**
+
+Introduce a central registry:
+
+`ProviderRegistry`
+
+Responsibilities:
+
+```js
+register();
+get();
+has();
+remove();
+list();
+```
+
+Example:
+
+`providerRegistry.register(localProvider);`
+
+Then:
+
+`providerRegistry.get(ProviderType.LOCAL);`
+
+The registry should not perform cryptographic operations.
+
+It only manages provider instances/metadata.
+
+- **10. Phase 7.6 — Provider Resolver**
+
+Registry answers:
+
+`"Which providers are registered?"`
+
+Resolver answers:
+
+`"Which provider should this operation use?"`
+
+For example:
+
+```js
+Encryption Request
+       │
+       ▼
+Provider Resolver
+       │
+       ├── tenant configuration
+       ├── security context
+       ├── requested capability
+       └── provider preference
+              │
+              ▼
+        Selected Provider
+```
+
+This distinction is important:
+
+```js
+Registry = provider storage/discovery
+
+Resolver = provider selection
+```
+
+Don't combine both responsibilities.
+
+- **11. Phase 7.7 — Provider Factory**
+
+We need a factory for creating providers.
+
+Conceptually:
+
+```js
+ProviderFactory
+│
+├── LOCAL
+├── AWS_KMS
+├── AZURE_KEY_VAULT
+├── GCP_KMS
+└── CUSTOM
+```
+
+Initially:
+
+```js
+LOCAL → implemented
+AWS → future
+Azure → future
+GCP → future
+```
+
+The factory should reject unsupported providers rather than silently falling back to Local.
+
+- **12. Phase 7.8 — Local Provider Adapter**
+
+This is one of the most important steps.
+
+We already have:
+
+```js
+LocalKeyProvider;
+LocalKeyMaterialProvider;
+LocalCryptoProvider;
+LocalSigningKeyProvider;
+LocalHmacKeyProvider;
+```
+
+We should formalize these as the reference provider implementation.
+
+```js
+Provider Architecture
+        │
+        ▼
+Local Provider
+        │
+ ┌──────┼───────────┐
+ ▼      ▼           ▼
+Key   Crypto      Signing
+ │      │           │
+ ▼      ▼           ▼
+Local  Local       Local
+
+```
+
+The existing behavior should remain unchanged.
+
+- **13. Phase 7.9 — Provider Configuration**
+
+Define provider configuration independently from provider implementation.
+
+For example:
+
+```js
+interface ProviderConfig {
+provider: ProviderType;
+enabled: boolean;
+configuration: Record<string, unknown>;
+}
+```
+
+But we must be careful with secrets.
+
+Never store:
+
+```js
+AWS_SECRET_ACCESS_KEY
+private keys
+database passwords
+API tokens
+```
+
+inside generic provider configuration as plaintext.
+
+Future Security Core should integrate these with the Secret/Credential system.
+
+For Phase 7, configuration should primarily establish the abstraction.
+
+- **14. Phase 7.10 — Provider Validation**
+
+Before a provider becomes READY:
+
+```js
+Provider Configuration
+↓
+Configuration validation
+↓
+Provider initialization
+↓
+Capability validation
+↓
+Health validation
+↓
+READY
+```
+
+Example:
+
+```js
+LOCAL
+→ key material provider available
+→ crypto provider available
+→ READY
+```
+
+Future:
+
+```js
+AWS KMS
+→ credentials available
+→ region configured
+→ KMS client initialized
+→ permission check
+→ READY
+```
+
+- **15. Phase 7.11 — Provider Error Model**
+
+We should introduce provider-specific errors without leaking infrastructure details.
+
+Potential hierarchy:
+
+```js
+SecurityCoreError
+│
+└── ProviderError
+├── ProviderNotFoundError
+├── ProviderNotSupportedError
+├── ProviderConfigurationError
+├── ProviderInitializationError
+├── ProviderUnavailableError
+├── ProviderCapabilityError
+└── ProviderOperationError
+```
+
+This gives us predictable error handling.
+
+- **16. Phase 7.12 — Provider Isolation Tests**
+
+We need to prove that application services don't depend on Local implementation details.
+
+Test:
+
+```js
+Mock Provider
+↓
+EncryptionService
+```
+
+If EncryptionService works with a mock provider:
+
+`✓ Provider abstraction works`
+
+We should test:
+
+```js
+provider registration
+provider lookup
+provider resolution
+capability validation
+unsupported provider
+unavailable provider
+provider lifecycle
+provider configuration validation
+```
+
+- **17. Phase 7.13 — Provider Switching Tests**
+
+This is critical.
+
+We want to prove:
+
+```js
+LOCAL
+↓
+provider selection
+↓
+operation
+```
+
+and:
+
+```js
+Mock Provider
+↓
+provider selection
+↓
+same operation
+```
+
+without changing the application service.
+
+The test should demonstrate:
+
+```js
+EncryptionService
+       │
+       ├── Local Provider
+       │
+       └── Test Provider
+```
+
+works through the same abstraction.
+
+- **18. Phase 7.14 — Backward Compatibility**
+
+All existing Phase 1–6 tests must continue passing.
+
+Especially:
+
+```js
+Phase 3 Encryption
+Phase 4 Hashing
+Phase 5 Signing/HMAC
+Phase 6 Security Context
+```
+
+Target:
+
+```js
+129/129 Phase 6 tests
+    +
+all previous Security Core tests
+```
+
+must remain green.
+
+- **19. Phase 7.15 — Security Review**
+
+We should specifically review:
+
+- No provider bypass
+
+`❌ Application → LocalCryptoProvider`
+
+Allowed:
+
+```js
+Application
+↓
+Security abstraction
+↓
+Provider
+```
+
+- No raw key material leakage
+
+```js
+❌ Provider registry stores raw keys
+❌ Provider metadata contains secrets
+❌ Provider errors expose credentials
+```
+
+- No silent fallback
+
+This is extremely important.
+
+If:
+
+`AWS_KMS`
+
+is requested but unavailable, we must not silently use:
+
+`LOCAL`
+
+because that could change the security boundary.
+
+It should fail explicitly.
+
+- **20. Phase 7.16 — Final Validation**
+
+At the end:
+
+`npx vitest run src/modules/security-core/**tests**`
+
+Then:
+
+`npm run type-check`
+
+Then:
+
+`npm run build`
+
+And manual provider verification if required.
+
+- **21. Phase 7.17 — Documentation**
+
+Update the Security Core architecture documentation with:
+
+```js
+Provider Architecture
+Provider Types
+Provider Capabilities
+Provider Registry
+Provider Resolver
+Provider Factory
+Provider Lifecycle
+Provider Error Model
+Local Provider
+Future Cloud Providers
+Provider Selection Rules
+Security Constraints
+```
+
+Also update the stale roadmap documentation that currently still says Phase 4–6 are pending.
+
+- Recommended final Phase 7 structure
+
+After completion, the architecture should look approximately like:
+
+```js
+src/modules/security-core/
+
+application/
+├── interfaces/
+│ ├── crypto.provider.interface.ts
+│ ├── key.provider.interface.ts
+│ ├── provider.interface.ts
+│ ├── provider.registry.interface.ts
+│ └── provider.resolver.interface.ts
+│
+├── services/
+│ ├── encryption.service.ts
+│ ├── provider-registry.service.ts
+│ ├── provider-resolver.service.ts
+│ └── provider-factory.service.ts
+│
+providers/
+├── interfaces/
+│ ├── key-material.provider.interface.ts
+│ ├── signing-key.provider.interface.ts
+│ └── hmac-key.provider.interface.ts
+│
+├── local/
+│ ├── local-key.provider.ts
+│ ├── local-key-material.provider.ts
+│ ├── local-crypto.provider.ts
+│ ├── local-signing-key.provider.ts
+│ └── local-hmac-key.provider.ts
+│
+├── types/
+│ ├── provider.types.ts
+│ ├── provider-capability.types.ts
+│ └── provider-config.types.ts
+│
+├── errors/
+│ ├── provider.error.ts
+│ ├── provider-not-found.error.ts
+│ ├── provider-not-supported.error.ts
+│ ├── provider-configuration.error.ts
+│ ├── provider-initialization.error.ts
+│ ├── provider-unavailable.error.ts
+│ └── provider-capability.error.ts
+│
+└── tests/
+└── provider/
+
+```
+
+``This is a target structure, not a command to create all these files immediately`. We should first verify the existing Phase 0–6 structure from the uploaded source and avoid duplicating interfaces/services that already exist.
+
+**Phase 7 completion definition**
+
+The phase is complete when this statement is true:
+
+`Security Core can select and use a provider through an abstraction without the application layer knowing whether the implementation is Local, cloud-based, or custom.`
+
+And technically:
+
+```js
+Provider contracts ✅
+Capability model ✅
+Provider metadata ✅
+Lifecycle ✅
+Registry ✅
+Resolver ✅
+Factory ✅
+Local adapter ✅
+Configuration model ✅
+Validation ✅
+Error model ✅
+Isolation tests ✅
+Provider switching tests ✅
+Backward compatibility ✅
+Security review ✅
+Type-check ✅
+Build ✅
+Regression suite ✅
+Documentation ✅
+```
+
+- Recommended implementation order
+
+We should not start with the Provider Factory.
+
+The safest order for your TraceMind architecture is:
+
+```js
+7.1 Freeze Provider Contracts
+↓
+7.2 Capability Model
+↓
+7.3 Provider Metadata
+↓
+7.4 Lifecycle Model
+↓
+7.5 Registry
+↓
+7.6 Resolver
+↓
+7.7 Factory
+↓
+7.8 Local Provider Adapter
+↓
+7.9 Configuration
+↓
+7.10 Validation
+↓
+7.11 Error Model
+↓
+7.12 Isolation Tests
+↓
+7.13 Switching Tests
+↓
+7.14 Regression
+↓
+7.15 Security Review
+↓
+7.16 Type-check + Build
+↓
+7.17 Documentation
+```
+
+- One architectural decision to keep frozen
+
+```js
+SecurityProvider
+        │
+        └── provider identity/lifecycle/metadata
+
+
+CryptoProvider
+        │
+        └── cryptographic operations
+
+
+KeyProvider
+        │
+        └── key lifecycle
+
+
+KeyMaterialProvider
+        │
+        └── encryption key material
+
+
+SigningKeyProvider
+        │
+        └── signing key material
+
+
+HmacKeyProvider
+        │
+        └── HMAC key material
+
+```

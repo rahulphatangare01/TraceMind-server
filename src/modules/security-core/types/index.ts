@@ -4,3 +4,6 @@ export * from "./hashing.types";
 export * from "./hmac.types";
 export * from "./signing.types";
 export * from "./key.types";
+export * from "./provider.types.js";
+export * from "./provider-capability.types.js";
+export * from "./provider-lifecycle.types.js";
