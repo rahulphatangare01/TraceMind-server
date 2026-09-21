@@ -9,3 +9,5 @@ export * from "./unsupported-algorithm.error.js";
 
 export * from "./security-context-validation.error.js";
 export * from "./security-boundary-validation.error.js";
+export * from "./provider-capability.error.js";
+export * from "./provider-lifecycle.error.js";
