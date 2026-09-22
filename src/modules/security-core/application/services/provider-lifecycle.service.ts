@@ -50,7 +50,7 @@ export class ProviderLifecycleService {
     to: SecurityProviderStatus,
   ): SecurityProviderStatus {
     if (!this.canTransition(from, to)) {
-      throw new ProviderLifecycleError(from, to);
+      throw new ProviderLifecycleError(from);
     }
 
     return to;
