@@ -7,3 +7,5 @@ export * from "./key.types";
 export * from "./provider.types.js";
 export * from "./provider-capability.types.js";
 export * from "./provider-lifecycle.types.js";
+export * from "./provider-validation.types.js";
+export * from "./provider-error.types.js";

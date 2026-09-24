@@ -107,20 +107,20 @@ npm run type-check
 7.1  -> Freeze Provider Contracts                 ✅
 7.2  -> Capability Model                          ✅
 7.3  -> Provider Metadata                         ✅
-7.4  -> Lifecycle Model                           🔵
-7.5  -> Registry                                  ⏳
-7.6  -> Resolver                                  ⏳
-7.7  -> Factory                                   ⏳
-7.8  -> Local Provider Adapter                    ⏳
-7.9  -> Configuration                             ⏳
-7.10 -> Validation                                ⏳
-7.11 -> Error Model                               ⏳
-7.12 -> Isolation Tests                           ⏳
-7.13 -> Switching Tests                           ⏳
-7.14 -> Regression                                ⏳
-7.15 -> Security Review                           ⏳
-7.16 -> Type-check + Build                        ⏳
-7.17 -> Documentation                             ⏳
+7.4  -> Lifecycle Model                           ✅
+7.5  -> Registry                                  ✅
+7.6  -> Resolver                                  ✅
+7.7  -> Factory                                   ✅
+7.8  -> Local Provider Adapter                    ✅
+7.9  -> Configuration                             ✅
+7.10 -> Validation                                ✅
+7.11 -> Error Model                               ✅
+7.12 -> Isolation Tests                           ✅
+7.13 -> Switching Tests                           ✅
+7.14 -> Regression                                ✅
+7.15 -> Security Review                           🔵
+7.16 -> Type-check + Build                        ✅
+7.17 -> Documentation                             ✅
 ```
 
 7.1 Provider Architecture Contract
@@ -148,12 +148,35 @@ npx vitest run src/modules/security-core/__tests__/phase-7/provider-contracts.sp
 npx vitest run src/modules/security-core/__tests__/phase-7/provider-capability.spec.ts
 npx vitest run src/modules/security-core/__tests__/phase-7/provider-metadata.spec.ts
 npx vitest run src/modules/security-core/__tests__/phase-7/provider-lifecycle.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-registry.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-resolver.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-factory.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/local-provider-adapter.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-configuration.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-validation.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-error-model.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-isolation.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-switching.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-backward-compatibility.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-7/provider-security-review.spec.ts
 
 
 npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-contracts.manual.ts
 npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-capability.manual.ts
 npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-metadata.manual.ts
 npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-lifecycle.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-registry.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-resolver.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-factory.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/local-provider-adapter.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-configuration.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-validation.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-error-model.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-isolation.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-switching.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-backward-compatibility.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-7/manual/provider-security-review.manual.ts
+
 
 npm run type-check
 ```
