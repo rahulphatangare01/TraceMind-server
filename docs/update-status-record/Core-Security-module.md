@@ -123,24 +123,6 @@ npm run type-check
 7.17 -> Documentation                             ✅
 ```
 
-7.1 Provider Architecture Contract
-7.2 Provider Capability Model
-7.3 Provider Identity & Metadata
-7.4 Provider Lifecycle
-7.5 Provider Registry
-7.6 Provider Resolver
-7.7 Provider Factory
-7.8 Local Provider Adapter
-7.9 Provider Configuration
-7.10 Provider Validation
-7.11 Provider Error Model
-7.12 Provider Isolation Tests
-7.13 Provider Switching Tests
-7.14 Backward Compatibility Tests
-7.15 Security Review
-7.16 Type-check / Build / Regression
-7.17 Phase 7 Documentation
-
 Testing command for phase 7
 
 ```js
@@ -184,3 +166,75 @@ npm run type-check
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
 Follow
 Every Phase 7 step ├── Implementation ├── 1. Automated spec test ├── 2. Manual verification ├── Type-check ├── Build └── Review
+
+---
+
+```js
+PHASE 8 — LOCAL PROVIDER
+
+8.1  Local Provider Baseline Review          ✅
+8.2  Local Provider Contract Compliance      ✅
+8.3  Local Provider Dependency Wiring        ✅
+8.4  Local Key Provider Hardening            ✅
+8.5  Local Key Version Lifecycle             ✅
+8.6  Local Key Material Management           ✅
+8.7  Local Encryption Integration            ✅
+8.8  Local Hashing Integration               ✅
+8.9  Local Signing Integration               ✅
+8.10 Local HMAC Integration                  🔵
+8.11 Local Provider Configuration            🔵
+8.12 Local Provider Runtime Lifecycle        🔵
+8.13 Local Provider Error Handling           🔵
+8.14 Local Provider Security Boundaries      🔵
+8.15 Local Provider Isolation & Concurrency  🔵
+8.16 Local Provider Regression / Hardening
+8.17 Phase 8 Documentation & Final Review
+
+```
+
+- Testing command for phase 8
+
+```js
+npx vitest run src/modules/security-core/__tests__/phase-8/local-provider-baseline.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-provider-contract-compliance.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-provider-dependency-wiring.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-key-provider-hardening.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-key-version-lifecycle.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-key-material-management.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-encryption-integration.spec.ts
+npx vitest run src/modules/security-core/__tests__/phase-8/local-encryption-integration.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-hashing.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-signing.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-hmac.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-configuration.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-runtime-lifecycle.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-error-handling.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-security-boundaries.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-isolation-concurrency.spec.ts
+
+
+
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-provider-baseline.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-provider-contract-compliance.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-provider-dependency-wiring.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-key-provider-hardening.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-key-version-lifecycle.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-key-material-management.manual.ts
+npx tsx src/modules/security-core/__tests__/phase-8/manual/local-encryption-integration.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-8-local-hashing.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-9-local-signing.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-10-local-hmac.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-11-local-provider-configuration.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-12-local-provider-runtime-lifecycle.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-13-local-provider-error-handling.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-14-local-provider-security-boundaries.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-15-local-provider-isolation-concurrency.manual.ts
+
+
+
+
+```
+
+All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
+Follow
+Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├── 2. Manual verification ├── Type-check ├── Build └── Review
