@@ -242,3 +242,43 @@ npx tsx src/modules/security-core/__tests__/providers/local/phase-8-17-documenta
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
 Follow
 Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├── 2. Manual verification ├── Type-check ├── Build └── Review
+
+- **Phase 9 Roadmap**
+
+```js
+9.1 Security Service Contract
+9.2 Security Service Types
+9.3 Security Service Validation
+9.4 Security Service Encryption API
+9.5 Security Service Decryption API
+9.6 Security Service Hashing API
+9.7 Security Service Hash Verification API
+9.8 Security Service Signing API
+9.9 Security Service Signature Verification API
+9.10 Security Service HMAC API
+9.11 Security Service HMAC Verification API
+9.12 Key Management API
+9.13 Security Context Integration
+9.14 Provider Resolution Integration
+9.15 Security Service Error Handling
+9.16 Security Service Container / Dependency Wiring
+9.17 Public API Facade
+9.18 API Contract & Regression Tests
+9.19 Security Boundary Review
+9.20 Documentation
+9.21 Final Type-check / Build / Review
+```
+
+```js
+
+npx vitest run src/modules/security-core/__tests__/application/security-service-contract.spec.ts
+
+
+
+
+npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
+
+
+
+
+```
