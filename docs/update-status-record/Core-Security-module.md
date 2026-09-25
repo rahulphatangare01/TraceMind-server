@@ -187,8 +187,8 @@ PHASE 8 — LOCAL PROVIDER
 8.13 Local Provider Error Handling           🔵
 8.14 Local Provider Security Boundaries      🔵
 8.15 Local Provider Isolation & Concurrency  🔵
-8.16 Local Provider Regression / Hardening
-8.17 Phase 8 Documentation & Final Review
+8.16 Local Provider Regression / Hardening   🔵
+8.17 Phase 8 Documentation & Final Review    🔵
 
 ```
 
@@ -211,6 +211,8 @@ npx vitest run src/modules/security-core/__tests__/providers/local/local-provide
 npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-error-handling.spec.ts
 npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-security-boundaries.spec.ts
 npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-isolation-concurrency.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-regression-hardening.spec.ts
+npx vitest run src/modules/security-core/__tests__/providers/local/local-provider-documentation.spec.ts
 
 
 
@@ -229,6 +231,8 @@ npx tsx src/modules/security-core/__tests__/providers/local/phase-8-12-local-pro
 npx tsx src/modules/security-core/__tests__/providers/local/phase-8-13-local-provider-error-handling.manual.ts
 npx tsx src/modules/security-core/__tests__/providers/local/phase-8-14-local-provider-security-boundaries.manual.ts
 npx tsx src/modules/security-core/__tests__/providers/local/phase-8-15-local-provider-isolation-concurrency.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-16-local-provider-regression-hardening.manual.ts
+npx tsx src/modules/security-core/__tests__/providers/local/phase-8-17-documentation-final-review.manual.ts
 
 
 
