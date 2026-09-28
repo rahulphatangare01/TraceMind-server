@@ -21,3 +21,4 @@ export * from "./provider-configuration.error.js";
 export * from "./provider-not-found.error.js";
 export * from "./provider-unavailable.error.js";
 export * from "./provider-disabled.error.js";
+export * from "./security-service-validation.error.js";

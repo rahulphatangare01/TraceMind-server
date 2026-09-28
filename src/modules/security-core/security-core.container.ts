@@ -1,27 +1,78 @@
 // import { EncryptionService } from "./application/services/encryption.service.js";
+
 // import { LocalKeyProvider } from "./providers/local/local-key.provider.js";
 // import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.provider.js";
+// import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.provider.js";
+// import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 // import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
 
+// import { SecurityContextValidator } from "./application/services/security-context-validator.service.js";
+// import { SigningService } from "./application/services/signing.service.js";
+// import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
+// import { HmacService } from "./application/services/hmac.service.js";
+// import { SecurityServiceEncryptionApi } from "./application/services/security-service-encryption-api.service.js";
+// // import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
 // const keyProvider = new LocalKeyProvider();
 
 // const keyMaterialProvider = new LocalKeyMaterialProvider();
 
-// const cryptoProvider = new LocalCryptoProvider();
+// const signingKeyProvider = new LocalSigningKeyProvider();
+
+// const hmacKeyProvider = new LocalHmacKeyProvider();
+// const securityBoundaryValidator = new SecurityBoundaryValidator();
+
+// const cryptoProvider = new LocalCryptoProvider(
+//   signingKeyProvider,
+//   hmacKeyProvider,
+// );
+// const signingService = new SigningService(
+//   cryptoProvider,
+//   securityBoundaryValidator,
+// );
+
+// const securityServiceValidation = new SecurityServiceValidationService(
+//   securityContextValidator,
+//   securityBoundaryValidator,
+// );
+// const encryptionService = new EncryptionService(
+//   keyProvider,
+//   keyMaterialProvider,
+//   cryptoProvider,
+//   securityBoundaryValidator,
+// );
+// const hmacService = new HmacService(cryptoProvider, securityBoundaryValidator);
+// const securityContextValidator = new SecurityContextValidator();
+// const securityServiceEncryptionApi = new SecurityServiceEncryptionApi(
+//   encryptionService,
+//   securityServiceValidation,
+// );
 
 // export const securityCore = {
 //   keyProvider,
 //   keyMaterialProvider,
+//   securityBoundaryValidator,
+//   signingKeyProvider,
+//   hmacKeyProvider,
 //   cryptoProvider,
+//   securityContextValidator,
+//   signingService,
+//   hmacService,
 
 //   encryptionService: new EncryptionService(
 //     keyProvider,
 //     keyMaterialProvider,
 //     cryptoProvider,
+//     securityBoundaryValidator,
 //   ),
 // };
-
 import { EncryptionService } from "./application/services/encryption.service.js";
+import { SigningService } from "./application/services/signing.service.js";
+import { HmacService } from "./application/services/hmac.service.js";
+
+import { SecurityContextValidator } from "./application/services/security-context-validator.service.js";
+import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
+import { SecurityServiceValidationService } from "./application/services/security-service-validation.service.js";
+import { SecurityServiceEncryptionApi } from "./application/services/security-service-encryption-api.service.js";
 
 import { LocalKeyProvider } from "./providers/local/local-key.provider.js";
 import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.provider.js";
@@ -29,11 +80,10 @@ import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.pro
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
 
-import { SecurityContextValidator } from "./application/services/security-context-validator.service.js";
-import { SigningService } from "./application/services/signing.service.js";
-import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
-import { HmacService } from "./application/services/hmac.service.js";
-// import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
+// --------------------------------------------------
+// 1. Local providers
+// --------------------------------------------------
+
 const keyProvider = new LocalKeyProvider();
 
 const keyMaterialProvider = new LocalKeyMaterialProvider();
@@ -41,34 +91,82 @@ const keyMaterialProvider = new LocalKeyMaterialProvider();
 const signingKeyProvider = new LocalSigningKeyProvider();
 
 const hmacKeyProvider = new LocalHmacKeyProvider();
+
+// --------------------------------------------------
+// 2. Validators
+// --------------------------------------------------
+
+const securityContextValidator = new SecurityContextValidator();
+
 const securityBoundaryValidator = new SecurityBoundaryValidator();
+
+// --------------------------------------------------
+// 3. Crypto provider
+// --------------------------------------------------
 
 const cryptoProvider = new LocalCryptoProvider(
   signingKeyProvider,
   hmacKeyProvider,
 );
+
+// --------------------------------------------------
+// 4. Application services
+// --------------------------------------------------
+
+const encryptionService = new EncryptionService(
+  keyProvider,
+  keyMaterialProvider,
+  cryptoProvider,
+  securityBoundaryValidator,
+);
+
 const signingService = new SigningService(
   cryptoProvider,
   securityBoundaryValidator,
 );
 
 const hmacService = new HmacService(cryptoProvider, securityBoundaryValidator);
-const securityContextValidator = new SecurityContextValidator();
+
+// --------------------------------------------------
+// 5. Security Service validation
+// --------------------------------------------------
+
+const securityServiceValidation = new SecurityServiceValidationService(
+  securityContextValidator,
+  securityBoundaryValidator,
+);
+
+// --------------------------------------------------
+// 6. Security Service public API
+// --------------------------------------------------
+
+const securityServiceEncryptionApi = new SecurityServiceEncryptionApi(
+  encryptionService,
+  securityServiceValidation,
+);
+
+// --------------------------------------------------
+// 7. Security Core container
+// --------------------------------------------------
 
 export const securityCore = {
+  // Providers
   keyProvider,
   keyMaterialProvider,
-  securityBoundaryValidator,
   signingKeyProvider,
   hmacKeyProvider,
   cryptoProvider,
+
+  // Validators
   securityContextValidator,
+  securityBoundaryValidator,
+
+  // Application services
+  encryptionService,
   signingService,
   hmacService,
-  encryptionService: new EncryptionService(
-    keyProvider,
-    keyMaterialProvider,
-    cryptoProvider,
-    securityBoundaryValidator,
-  ),
+
+  // Security Service API
+  securityServiceValidation,
+  securityServiceEncryptionApi,
 };

@@ -93,10 +93,12 @@ function run(): void {
 
   const encryptRequest: EncryptRequest = {
     plaintext: "TraceMind secret configuration",
-    algorithm: EncryptionAlgorithm.AES_256_GCM,
+    // algorithm: EncryptionAlgorithm.AES_256_GCM,
     context: securityContext,
     encoding: CryptoEncoding.BASE64,
-    keyVersion: 1,
+    // keyVersion: 1,
+    // keyId: "org-Id",
+    keyId: "key-phase-9-2",
   };
 
   const encryptResult: EncryptResult = {
