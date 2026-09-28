@@ -4,15 +4,20 @@ import type {
 } from "../domain/enums/index.js";
 import type { SecurityContext } from "../domain/models/security-context.js";
 
+// export interface EncryptRequest {
+//   plaintext: string;
+//   algorithm: EncryptionAlgorithm;
+//   context: SecurityContext;
+//   encoding?: CryptoEncoding;
+//   keyId?: string;
+//   keyVersion: number;
+// }
 export interface EncryptRequest {
   plaintext: string;
-  algorithm: EncryptionAlgorithm;
   context: SecurityContext;
   encoding?: CryptoEncoding;
-  keyId?: string;
-  keyVersion: number;
+  keyId: string;
 }
-
 export interface EncryptResult {
   ciphertext: string;
   algorithm: EncryptionAlgorithm;
