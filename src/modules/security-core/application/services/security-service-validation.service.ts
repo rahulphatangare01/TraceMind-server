@@ -4,7 +4,10 @@ import type { SecurityBoundaryValidator } from "./security-boundary-validator.se
 ("");
 
 import { SecurityServiceValidationError } from "../../errors/security-service-validation.error.js";
-("");
+import {
+  CryptoEncoding,
+  EncryptionAlgorithm,
+} from "../../domain/enums/index.js";
 
 type Validator = {
   validate(context: unknown): unknown;
@@ -30,14 +33,38 @@ export class SecurityServiceValidationService {
     this.validateContext(data.context);
   }
 
+  // validateDecryptRequest(request: unknown): void {
+  //   const data = this.requireObject(request, "Decryption request");
+
+  //   this.requireString(data, "encrypted", "Encrypted value");
+  //   this.requireString(data, "keyId", "Decryption key ID");
+  //   this.validateContext(data.context);
+  // }
   validateDecryptRequest(request: unknown): void {
     const data = this.requireObject(request, "Decryption request");
 
-    this.requireString(data, "encrypted", "Encrypted value");
+    this.requireString(data, "ciphertext", "Ciphertext");
+    this.requireString(data, "iv", "Initialization vector");
+    this.requireString(data, "authTag", "Authentication tag");
     this.requireString(data, "keyId", "Decryption key ID");
+
+    if (
+      !Object.values(EncryptionAlgorithm).includes(
+        data.algorithm as EncryptionAlgorithm,
+      )
+    ) {
+      this.fail("Unsupported encryption algorithm.");
+    }
+
+    if (
+      !Object.values(CryptoEncoding).includes(data.encoding as CryptoEncoding)
+    ) {
+      this.fail("Unsupported encryption encoding.");
+    }
+
+    this.requirePositiveInteger(data, "keyVersion", "Key version");
     this.validateContext(data.context);
   }
-
   validateHashRequest(request: unknown): void {
     const data = this.requireObject(request, "Hash request");
 
