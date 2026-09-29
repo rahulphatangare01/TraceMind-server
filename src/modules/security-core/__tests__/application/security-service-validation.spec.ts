@@ -12,6 +12,8 @@ import {
   SecurityScope,
   DataClassification,
   SecurityPurpose,
+  EncryptionAlgorithm,
+  CryptoEncoding,
 } from "../../domain/enums";
 
 import { HashAlgorithm } from "../../domain/enums";
@@ -100,23 +102,61 @@ describe("SecurityServiceValidationService", () => {
     });
   });
 
+  // describe("decrypt request validation", () => {
+  //   it("accepts a valid decryption request", () => {
+  //     expect(() =>
+  //       service.validateDecryptRequest({
+  //         encrypted: "encrypted-payload",
+  //         context: validContext,
+  //         keyId: "key-001",
+  //       }),
+  //     ).not.toThrow();
+  //   });
+
+  //   it("rejects an empty encrypted value", () => {
+  //     expect(() =>
+  //       service.validateDecryptRequest({
+  //         encrypted: "",
+  //         context: validContext,
+  //         keyId: "key-001",
+  //       }),
+  //     ).toThrow(SecurityServiceValidationError);
+  //   });
+
+  //   it("rejects a missing key ID", () => {
+  //     expect(() =>
+  //       service.validateDecryptRequest({
+  //         encrypted: "encrypted-payload",
+  //         context: validContext,
+  //         keyId: "",
+  //       }),
+  //     ).toThrow(SecurityServiceValidationError);
+  //   });
+  // });
+
   describe("decrypt request validation", () => {
+    const validDecryptRequest = {
+      ciphertext: "encrypted-payload",
+      algorithm: EncryptionAlgorithm.AES_256_GCM,
+      encoding: CryptoEncoding.BASE64,
+      iv: "initialization-vector",
+      authTag: "authentication-tag",
+      keyId: "key-001",
+      keyVersion: 1,
+      context: validContext,
+    };
+
     it("accepts a valid decryption request", () => {
       expect(() =>
-        service.validateDecryptRequest({
-          encrypted: "encrypted-payload",
-          context: validContext,
-          keyId: "key-001",
-        }),
+        service.validateDecryptRequest(validDecryptRequest),
       ).not.toThrow();
     });
 
-    it("rejects an empty encrypted value", () => {
+    it("rejects an empty ciphertext", () => {
       expect(() =>
         service.validateDecryptRequest({
-          encrypted: "",
-          context: validContext,
-          keyId: "key-001",
+          ...validDecryptRequest,
+          ciphertext: "",
         }),
       ).toThrow(SecurityServiceValidationError);
     });
@@ -124,14 +164,39 @@ describe("SecurityServiceValidationService", () => {
     it("rejects a missing key ID", () => {
       expect(() =>
         service.validateDecryptRequest({
-          encrypted: "encrypted-payload",
-          context: validContext,
+          ...validDecryptRequest,
           keyId: "",
         }),
       ).toThrow(SecurityServiceValidationError);
     });
-  });
 
+    it("rejects a non-positive key version", () => {
+      expect(() =>
+        service.validateDecryptRequest({
+          ...validDecryptRequest,
+          keyVersion: 0,
+        }),
+      ).toThrow(SecurityServiceValidationError);
+    });
+
+    it("rejects an unsupported algorithm", () => {
+      expect(() =>
+        service.validateDecryptRequest({
+          ...validDecryptRequest,
+          algorithm: "UNSUPPORTED",
+        }),
+      ).toThrow(SecurityServiceValidationError);
+    });
+
+    it("rejects an unsupported encoding", () => {
+      expect(() =>
+        service.validateDecryptRequest({
+          ...validDecryptRequest,
+          encoding: "UNSUPPORTED",
+        }),
+      ).toThrow(SecurityServiceValidationError);
+    });
+  });
   describe("hash request validation", () => {
     it("accepts a valid hash request", () => {
       expect(() =>
