@@ -79,6 +79,7 @@ import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.p
 import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.provider.js";
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
+import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
 
 // --------------------------------------------------
 // 1. Local providers
@@ -156,7 +157,7 @@ export const securityCore = {
   signingKeyProvider,
   hmacKeyProvider,
   cryptoProvider,
-
+  // SecurityServiceDecryptionApi,
   // Validators
   securityContextValidator,
   securityBoundaryValidator,

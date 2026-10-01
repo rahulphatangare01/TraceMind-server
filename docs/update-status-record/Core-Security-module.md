@@ -250,7 +250,9 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 9.2 Security Service Types
 9.3 Security Service Validation
 9.4 Security Service Encryption API
+
 9.5 Security Service Decryption API
+
 9.6 Security Service Hashing API
 9.7 Security Service Hash Verification API
 9.8 Security Service Signing API
