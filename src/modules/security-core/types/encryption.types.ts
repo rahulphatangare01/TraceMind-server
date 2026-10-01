@@ -44,7 +44,8 @@ export interface DecryptRequest {
   // context: SecurityContext;
   ciphertext: string;
   algorithm: EncryptionAlgorithm;
-  encoding?: CryptoEncoding;
+  // encoding?: CryptoEncoding;
+  encoding: CryptoEncoding;
   iv: string;
   authTag: string;
   keyId: string;
