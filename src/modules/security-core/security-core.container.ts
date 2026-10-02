@@ -80,7 +80,7 @@ import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.pro
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
 import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
-
+// import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
 // --------------------------------------------------
@@ -146,6 +146,11 @@ const securityServiceEncryptionApi = new SecurityServiceEncryptionApi(
   securityServiceValidation,
 );
 
+const securityServiceDecryptionApi = new SecurityServiceDecryptionApi(
+  encryptionService,
+  securityServiceValidation,
+);
+
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -170,4 +175,5 @@ export const securityCore = {
   // Security Service API
   securityServiceValidation,
   securityServiceEncryptionApi,
+  securityServiceDecryptionApi,
 };
