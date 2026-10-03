@@ -276,7 +276,7 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 npx vitest run src/modules/security-core/__tests__/application/security-service-contract.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-types.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-validation.spec.ts
-npx vitest run src/modules/security-core/__tests__/application/security-service-validation.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-encryption-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-decryption-api.spec.ts
 
 
@@ -285,7 +285,7 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-2-security-service-types.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-3-security-service-validation.manual.ts
-npx tsx src/modules/security-core/__tests__/application/phase-9-3-security-service-validation.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-4-security-service-encryption-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-5-security-service-decryption-api.manual.ts
 
 
