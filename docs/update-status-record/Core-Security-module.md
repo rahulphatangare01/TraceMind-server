@@ -278,7 +278,7 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-validation.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-encryption-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-decryption-api.spec.ts
-
+npx vitest run src/modules/security-core/__tests__/application/security-service-hashing-api.spec.ts
 
 
 
