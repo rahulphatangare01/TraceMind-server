@@ -7,6 +7,7 @@ import { SecurityServiceValidationError } from "../../errors/security-service-va
 import {
   CryptoEncoding,
   EncryptionAlgorithm,
+  HashAlgorithm,
 } from "../../domain/enums/index.js";
 
 type Validator = {
@@ -65,13 +66,30 @@ export class SecurityServiceValidationService {
     this.requirePositiveInteger(data, "keyVersion", "Key version");
     this.validateContext(data.context);
   }
+  // validateHashRequest(request: unknown): void {
+  //   const data = this.requireObject(request, "Hash request");
+
+  //   this.requireString(data, "value", "Hash value");
+  //   this.requireString(data, "algorithm", "Hash algorithm");
+  // }
   validateHashRequest(request: unknown): void {
     const data = this.requireObject(request, "Hash request");
 
     this.requireString(data, "value", "Hash value");
-    this.requireString(data, "algorithm", "Hash algorithm");
-  }
 
+    if (
+      !Object.values(HashAlgorithm).includes(data.algorithm as HashAlgorithm)
+    ) {
+      this.fail("Unsupported hash algorithm.");
+    }
+
+    if (
+      data.encoding !== undefined &&
+      !Object.values(CryptoEncoding).includes(data.encoding as CryptoEncoding)
+    ) {
+      this.fail("Unsupported hash encoding.");
+    }
+  }
   validateVerifyHashRequest(request: unknown): void {
     const data = this.requireObject(request, "Hash verification request");
 
