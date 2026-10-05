@@ -90,12 +90,31 @@ export class SecurityServiceValidationService {
       this.fail("Unsupported hash encoding.");
     }
   }
+  // validateVerifyHashRequest(request: unknown): void {
+  //   const data = this.requireObject(request, "Hash verification request");
+
+  //   this.requireString(data, "value", "Value to verify");
+  //   this.requireString(data, "hash", "Hash");
+  //   this.requireString(data, "algorithm", "Hash algorithm");
+  // }
   validateVerifyHashRequest(request: unknown): void {
     const data = this.requireObject(request, "Hash verification request");
 
     this.requireString(data, "value", "Value to verify");
     this.requireString(data, "hash", "Hash");
-    this.requireString(data, "algorithm", "Hash algorithm");
+
+    if (
+      !Object.values(HashAlgorithm).includes(data.algorithm as HashAlgorithm)
+    ) {
+      this.fail("Unsupported hash algorithm.");
+    }
+
+    if (
+      data.encoding !== undefined &&
+      !Object.values(CryptoEncoding).includes(data.encoding as CryptoEncoding)
+    ) {
+      this.fail("Unsupported hash encoding.");
+    }
   }
 
   validateSignRequest(request: unknown): void {

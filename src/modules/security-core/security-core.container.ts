@@ -1,70 +1,3 @@
-// import { EncryptionService } from "./application/services/encryption.service.js";
-
-// import { LocalKeyProvider } from "./providers/local/local-key.provider.js";
-// import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.provider.js";
-// import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.provider.js";
-// import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
-// import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
-
-// import { SecurityContextValidator } from "./application/services/security-context-validator.service.js";
-// import { SigningService } from "./application/services/signing.service.js";
-// import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
-// import { HmacService } from "./application/services/hmac.service.js";
-// import { SecurityServiceEncryptionApi } from "./application/services/security-service-encryption-api.service.js";
-// // import { SecurityBoundaryValidator } from "./application/services/security-boundary-validator.service.js";
-// const keyProvider = new LocalKeyProvider();
-
-// const keyMaterialProvider = new LocalKeyMaterialProvider();
-
-// const signingKeyProvider = new LocalSigningKeyProvider();
-
-// const hmacKeyProvider = new LocalHmacKeyProvider();
-// const securityBoundaryValidator = new SecurityBoundaryValidator();
-
-// const cryptoProvider = new LocalCryptoProvider(
-//   signingKeyProvider,
-//   hmacKeyProvider,
-// );
-// const signingService = new SigningService(
-//   cryptoProvider,
-//   securityBoundaryValidator,
-// );
-
-// const securityServiceValidation = new SecurityServiceValidationService(
-//   securityContextValidator,
-//   securityBoundaryValidator,
-// );
-// const encryptionService = new EncryptionService(
-//   keyProvider,
-//   keyMaterialProvider,
-//   cryptoProvider,
-//   securityBoundaryValidator,
-// );
-// const hmacService = new HmacService(cryptoProvider, securityBoundaryValidator);
-// const securityContextValidator = new SecurityContextValidator();
-// const securityServiceEncryptionApi = new SecurityServiceEncryptionApi(
-//   encryptionService,
-//   securityServiceValidation,
-// );
-
-// export const securityCore = {
-//   keyProvider,
-//   keyMaterialProvider,
-//   securityBoundaryValidator,
-//   signingKeyProvider,
-//   hmacKeyProvider,
-//   cryptoProvider,
-//   securityContextValidator,
-//   signingService,
-//   hmacService,
-
-//   encryptionService: new EncryptionService(
-//     keyProvider,
-//     keyMaterialProvider,
-//     cryptoProvider,
-//     securityBoundaryValidator,
-//   ),
-// };
 import { EncryptionService } from "./application/services/encryption.service.js";
 import { SigningService } from "./application/services/signing.service.js";
 import { HmacService } from "./application/services/hmac.service.js";
@@ -81,7 +14,7 @@ import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
 import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
 import { SecurityServiceHashingApi } from "./application/services/security-service-hashing-api.service.js";
-// import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
+import { SecurityServiceHashVerificationApi } from "./application/services/security-service-hash-verification-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
 // --------------------------------------------------
@@ -156,6 +89,11 @@ const securityServiceHashingApi = new SecurityServiceHashingApi(
   cryptoProvider,
   securityServiceValidation,
 );
+const securityServiceHashVerificationApi =
+  new SecurityServiceHashVerificationApi(
+    cryptoProvider,
+    securityServiceValidation,
+  );
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -182,4 +120,5 @@ export const securityCore = {
   securityServiceEncryptionApi,
   securityServiceDecryptionApi,
   securityServiceHashingApi,
+  securityServiceHashVerificationApi,
 };
