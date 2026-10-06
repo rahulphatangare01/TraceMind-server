@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Palette Preview</title>
+    <style>
+      :root {
+        --primary: #176b78;
+        --primary-dark: #123b4a;
+        --secondary: #5bb8d4;
+        --accent: #f4c95d;
+        --background: #f8faf9;
+        --card-bg: #ffffff;
+        --text: #263238;
+        --muted-text: #66757f;
+        --success: #5e9f78;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--background);
+        color: var(--text);
+        padding: 24px;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      h2 {
+        margin-bottom: 8px;
+        color: var(--primary-dark);
+        font-size: 22px;
+      }
+
+      p.subtitle {
+        color: var(--muted-text);
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 36px;
+      }
+
+      .swatch-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .color-box {
+        height: 100px;
+        width: 100%;
+        position: relative;
+      }
+
+      .swatch-info {
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .swatch-role {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-text);
+        font-weight: 600;
+      }
+
+      .swatch-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .swatch-hex {
+        font-family: monospace;
+        font-size: 13px;
+        color: var(--primary-dark);
+        font-weight: 600;
+        margin-top: 2px;
+      }
+
+      .mockup-container {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .mockup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--background);
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        color: var(--primary-dark);
+        font-size: 18px;
+      }
+
+      .brand-icon {
+        width: 28px;
+        height: 28px;
+        background-color: var(--primary);
+        border-radius: 6px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 16px;
+        font-size: 14px;
+        color: var(--muted-text);
+      }
+
+      .nav-links span.active {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .card-preview {
+        background-color: var(--background);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+      }
+
+      .card-content {
+        flex: 1;
+      }
+
+      .badge {
+        display: inline-block;
+        background-color: var(--accent);
+        color: var(--primary-dark);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+
+      .badge-success {
+        background-color: var(--success);
+        color: #ffffff;
+      }
+
+      .card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .card-text {
+        font-size: 14px;
+        color: var(--muted-text);
+        line-height: 1.5;
+        margin-bottom: 16px;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background-color: var(--primary);
+        color: #ffffff;
+      }
+
+      .btn-secondary {
+        background-color: var(--secondary);
+        color: var(--primary-dark);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Color Swatches</h2>
+      <p class="subtitle">
+        Complete hex code preview for your palette specification
+      </p>
+
+      <div class="grid">
+        <!-- Primary -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #176b78"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Primary</span>
+            <span class="swatch-name">Deep Teal Blue</span>
+            <span class="swatch-hex">#176B78</span>
+          </div>
+        </div>
+
+        <!-- Primary Dark -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #123b4a"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Primary Dark</span>
+            <span class="swatch-name">Deep Navy</span>
+            <span class="swatch-hex">#123B4A</span>
+          </div>
+        </div>
+
+        <!-- Secondary -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #5bb8d4"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Secondary</span>
+            <span class="swatch-name">Soft Sky Blue</span>
+            <span class="swatch-hex">#5BB8D4</span>
+          </div>
+        </div>
+
+        <!-- Accent -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #f4c95d"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Accent</span>
+            <span class="swatch-name">Warm Yellow</span>
+            <span class="swatch-hex">#F4C95D</span>
+          </div>
+        </div>
+
+        <!-- Background -->
+        <div class="swatch-card">
+          <div
+            class="color-box"
+            style="background-color: #f8faf9; border-bottom: 1px solid #eeeeee"
+          ></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Background</span>
+            <span class="swatch-name">Warm White</span>
+            <span class="swatch-hex">#F8FAF9</span>
+          </div>
+        </div>
+
+        <!-- Card Background -->
+        <div class="swatch-card">
+          <div
+            class="color-box"
+            style="background-color: #ffffff; border-bottom: 1px solid #eeeeee"
+          ></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Card Background</span>
+            <span class="swatch-name">White</span>
+            <span class="swatch-hex">#FFFFFF</span>
+          </div>
+        </div>
+
+        <!-- Text -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #263238"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Text</span>
+            <span class="swatch-name">Charcoal</span>
+            <span class="swatch-hex">#263238</span>
+          </div>
+        </div>
+
+        <!-- Muted Text -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #66757f"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Muted Text</span>
+            <span class="swatch-name">Slate Gray</span>
+            <span class="swatch-hex">#66757F</span>
+          </div>
+        </div>
+
+        <!-- Success -->
+        <div class="swatch-card">
+          <div class="color-box" style="background-color: #5e9f78"></div>
+          <div class="swatch-info">
+            <span class="swatch-role">Success</span>
+            <span class="swatch-name">Soft Green</span>
+            <span class="swatch-hex">#5E9F78</span>
+          </div>
+        </div>
+      </div>
+
+      <h2>Live UI Component Preview</h2>
+      <p class="subtitle">
+        How these colors function together in layout hierarchy
+      </p>
+
+      <div class="mockup-container">
+        <div class="mockup-header">
+          <div class="brand">
+            <div class="brand-icon"></div>
+            Design System
+          </div>
+          <div class="nav-links">
+            <span class="active">Overview</span>
+            <span>Components</span>
+            <span>Palette</span>
+          </div>
+        </div>
+
+        <div class="card-preview">
+          <div class="card-content">
+            <span class="badge">Featured</span>
+            <span class="badge badge-success">Completed</span>
+            <h3 class="card-title">Deep Teal & Warm Yellow Theme</h3>
+            <p class="card-text">
+              This card uses <strong>Warm White (#F8FAF9)</strong> for the base
+              container, <strong>Charcoal (#263238)</strong> for main headings,
+              and <strong>Slate Gray (#66757F)</strong> for body text.
+            </p>
+            <div class="btn-group">
+              <button class="btn btn-primary">Primary Action</button>
+              <button class="btn btn-secondary">Secondary Action</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

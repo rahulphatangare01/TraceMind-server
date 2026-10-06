@@ -246,15 +246,13 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 - **Phase 9 Roadmap**
 
 ```js
-9.1 Security Service Contract
-9.2 Security Service Types
-9.3 Security Service Validation
-9.4 Security Service Encryption API
-
-9.5 Security Service Decryption API
-
-9.6 Security Service Hashing API
-9.7 Security Service Hash Verification API
+9.1 Security Service Contract                                     ✅
+9.2 Security Service Types                                        ✅
+9.3 Security Service Validation                                   ✅
+9.4 Security Service Encryption API                               ✅
+9.5 Security Service Decryption API                               ✅
+9.6 Security Service Hashing API                                  ✅
+9.7 Security Service Hash Verification API                        ✅
 9.8 Security Service Signing API
 9.9 Security Service Signature Verification API
 9.10 Security Service HMAC API
@@ -280,6 +278,8 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-decryption-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-hashing-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-hash-verification-api.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-signing-api.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-signature-verification-api.spec.ts
 
 
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
@@ -288,7 +288,8 @@ npx tsx src/modules/security-core/__tests__/application/phase-9-3-security-servi
 npx tsx src/modules/security-core/__tests__/application/phase-9-4-security-service-encryption-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-5-security-service-decryption-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-7-security-service-hash-verification-api.manual.ts
-
+npx tsx src/modules/security-core/__tests__/application/phase-9-8-security-service-signing-api.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-9-security-service-signature-verification-api.manual.ts
 ```
 
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next

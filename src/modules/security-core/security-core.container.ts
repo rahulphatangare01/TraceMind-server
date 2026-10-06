@@ -12,9 +12,17 @@ import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.p
 import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.provider.js";
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
-import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
-import { SecurityServiceHashingApi } from "./application/services/security-service-hashing-api.service.js";
-import { SecurityServiceHashVerificationApi } from "./application/services/security-service-hash-verification-api.service.js";
+// import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
+// import { SecurityServiceHashingApi } from "./application/services/security-service-hashing-api.service.js";
+// import { SecurityServiceHashVerificationApi } from "./application/services/security-service-hash-verification-api.service.js";
+// import { SecurityServiceSigningApi } from "./application/services/security-service-signing-api.service.js";
+import {
+  SecurityServiceSignatureVerificationApi,
+  SecurityServiceSigningApi,
+  SecurityServiceDecryptionApi,
+  SecurityServiceHashingApi,
+  SecurityServiceHashVerificationApi,
+} from "./application/services";
 // --------------------------------------------------
 // 1. Local providers
 // --------------------------------------------------
@@ -94,6 +102,18 @@ const securityServiceHashVerificationApi =
     cryptoProvider,
     securityServiceValidation,
   );
+
+const securityServiceSigningApi = new SecurityServiceSigningApi(
+  cryptoProvider,
+  securityServiceValidation,
+);
+
+const securityServiceSignatureVerificationApi =
+  new SecurityServiceSignatureVerificationApi(
+    cryptoProvider,
+    securityServiceValidation,
+  );
+
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -121,4 +141,6 @@ export const securityCore = {
   securityServiceDecryptionApi,
   securityServiceHashingApi,
   securityServiceHashVerificationApi,
+  securityServiceSigningApi,
+  securityServiceSignatureVerificationApi,
 };
