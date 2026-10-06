@@ -8,6 +8,7 @@ import {
   CryptoEncoding,
   EncryptionAlgorithm,
   HashAlgorithm,
+  SignatureAlgorithm,
 } from "../../domain/enums/index.js";
 
 type Validator = {
@@ -25,7 +26,30 @@ export class SecurityServiceValidationService {
     this.contextValidator = contextValidator as unknown as Validator;
     this.boundaryValidator = boundaryValidator as unknown as Validator;
   }
+  private validateSignatureAlgorithm(value: unknown): void {
+    if (
+      typeof value !== "string" ||
+      !Object.values(SignatureAlgorithm).includes(value as SignatureAlgorithm)
+    ) {
+      throw new SecurityServiceValidationError(
+        "Unsupported signature algorithm",
+        {
+          code: "SECURITY_SERVICE_VALIDATION_ERROR",
+        },
+      );
+    }
+  }
 
+  private validateCryptoEncoding(value: unknown): void {
+    if (
+      typeof value !== "string" ||
+      !Object.values(CryptoEncoding).includes(value as CryptoEncoding)
+    ) {
+      throw new SecurityServiceValidationError("Unsupported crypto encoding", {
+        code: "SECURITY_SERVICE_VALIDATION_ERROR",
+      });
+    }
+  }
   validateEncryptRequest(request: unknown): void {
     const data = this.requireObject(request, "Encryption request");
 
@@ -117,14 +141,28 @@ export class SecurityServiceValidationService {
     }
   }
 
+  // validateSignRequest(request: unknown): void {
+  //   const data = this.requireObject(request, "Signing request");
+
+  //   this.requireString(data, "payload", "Signing payload");
+  //   this.requireString(data, "algorithm", "Signature algorithm");
+  //   this.validateContext(data.context);
+  // }
+
   validateSignRequest(request: unknown): void {
     const data = this.requireObject(request, "Signing request");
 
     this.requireString(data, "payload", "Signing payload");
     this.requireString(data, "algorithm", "Signature algorithm");
+
+    this.validateSignatureAlgorithm(data.algorithm);
+
+    if (data.encoding !== undefined) {
+      this.validateCryptoEncoding(data.encoding);
+    }
+
     this.validateContext(data.context);
   }
-
   validateVerifySignatureRequest(request: unknown): void {
     const data = this.requireObject(request, "Signature verification request");
 
