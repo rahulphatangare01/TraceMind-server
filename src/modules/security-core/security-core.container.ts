@@ -22,7 +22,10 @@ import {
   SecurityServiceDecryptionApi,
   SecurityServiceHashingApi,
   SecurityServiceHashVerificationApi,
+  SecurityServiceHmacApi,
 } from "./application/services";
+
+// import { SecurityServiceHmacApi } from "./services/security-service-hmac-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
 // --------------------------------------------------
@@ -113,7 +116,10 @@ const securityServiceSignatureVerificationApi =
     cryptoProvider,
     securityServiceValidation,
   );
-
+const securityServiceHmacApi = new SecurityServiceHmacApi(
+  cryptoProvider,
+  securityServiceValidation,
+);
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -143,4 +149,5 @@ export const securityCore = {
   securityServiceHashVerificationApi,
   securityServiceSigningApi,
   securityServiceSignatureVerificationApi,
+  securityServiceHmacApi,
 };
