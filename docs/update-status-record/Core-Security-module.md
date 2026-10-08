@@ -282,6 +282,7 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-signature-verification-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-signature-verification-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-hmac-api.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-hmac-verification-api.spec.ts
 
 
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
@@ -293,7 +294,7 @@ npx tsx src/modules/security-core/__tests__/application/phase-9-7-security-servi
 npx tsx src/modules/security-core/__tests__/application/phase-9-8-security-service-signing-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-9-security-service-signature-verification-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-10-security-service-hmac-api.manual.ts
-
+npx tsx src/modules/security-core/__tests__/application/phase-9-11-security-service-hmac-verification-api.manual.ts
 ```
 
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next

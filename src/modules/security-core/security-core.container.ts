@@ -23,6 +23,7 @@ import {
   SecurityServiceHashingApi,
   SecurityServiceHashVerificationApi,
   SecurityServiceHmacApi,
+  SecurityServiceHmacVerificationApi,
 } from "./application/services";
 
 // import { SecurityServiceHmacApi } from "./services/security-service-hmac-api.service.js";
@@ -120,6 +121,11 @@ const securityServiceHmacApi = new SecurityServiceHmacApi(
   cryptoProvider,
   securityServiceValidation,
 );
+const securityServiceHmacVerificationApi =
+  new SecurityServiceHmacVerificationApi(
+    cryptoProvider,
+    securityServiceValidation,
+  );
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -150,4 +156,5 @@ export const securityCore = {
   securityServiceSigningApi,
   securityServiceSignatureVerificationApi,
   securityServiceHmacApi,
+  securityServiceHmacVerificationApi,
 };
