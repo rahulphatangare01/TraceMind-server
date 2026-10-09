@@ -256,7 +256,7 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 9.8 Security Service Signing API                                  ✅
 9.9 Security Service Signature Verification API                   ✅
 9.10 Security Service HMAC API                                    ✅
-9.11 Security Service HMAC Verification API
+9.11 Security Service HMAC Verification API                       ✅
 9.12 Key Management API
 9.13 Security Context Integration
 9.14 Provider Resolution Integration
@@ -283,6 +283,9 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-signature-verification-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-hmac-api.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-hmac-verification-api.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-key-management-api.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-context-integration.spec.ts
+
 
 
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
@@ -295,7 +298,12 @@ npx tsx src/modules/security-core/__tests__/application/phase-9-8-security-servi
 npx tsx src/modules/security-core/__tests__/application/phase-9-9-security-service-signature-verification-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-10-security-service-hmac-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-11-security-service-hmac-verification-api.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-12-security-service-key-management-api.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-13-security-context-integration.manual.ts
+
 ```
+
+npm run test:security
 
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
 Follow

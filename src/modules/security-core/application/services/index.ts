@@ -11,3 +11,4 @@ export * from "./security-service-signing-api.service.js";
 export * from "./security-service-signature-verification-api.service.js";
 export * from "./security-service-hmac-api.service.js";
 export * from "./security-service-hmac-verification-api.service.js";
+export * from "./security-service-key-management-api.service.js";

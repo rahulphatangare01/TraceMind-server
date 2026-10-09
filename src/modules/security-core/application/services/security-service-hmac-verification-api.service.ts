@@ -13,8 +13,13 @@ export class SecurityServiceHmacVerificationApi {
   ) {}
 
   async verifyHmac(request: VerifyHmacRequest): Promise<VerifyHmacResult> {
-    this.validationService.validateVerifyHmacRequest(request);
+    // this.validationService.validateVerifyHmacRequest(request);
+    // return this.cryptoProvider.verifyHmac(request);
+    const context = this.validationService.validateVerifyHmacRequest(request);
 
-    return this.cryptoProvider.verifyHmac(request);
+    return this.cryptoProvider.verifyHmac({
+      ...request,
+      context,
+    });
   }
 }

@@ -15,14 +15,20 @@ export class SecurityServiceEncryptionApi {
   ) {}
 
   async encrypt(request: EncryptRequest): Promise<EncryptResult> {
-    this.validationService.validateEncryptRequest(request);
+    // this.validationService.validateEncryptRequest(request);
+
+    // const encryptedEnvelope = await this.encryptionService.encrypt(
+    //   request.plaintext,
+    //   request.context,
+    //   request.keyId,
+    // );
+    const context = this.validationService.validateEncryptRequest(request);
 
     const encryptedEnvelope = await this.encryptionService.encrypt(
       request.plaintext,
-      request.context,
+      context,
       request.keyId,
     );
-
     const envelope = parseEncryptionEnvelope(encryptedEnvelope);
 
     return {

@@ -13,8 +13,13 @@ export class SecurityServiceHmacApi {
   ) {}
 
   async createHmac(request: CreateHmacRequest): Promise<CreateHmacResult> {
-    this.validationService.validateCreateHmacRequest(request);
+    // this.validationService.validateCreateHmacRequest(request);
+    // return this.cryptoProvider.createHmac(request);
+    const context = this.validationService.validateCreateHmacRequest(request);
 
-    return this.cryptoProvider.createHmac(request);
+    return this.cryptoProvider.createHmac({
+      ...request,
+      context,
+    });
   }
 }
