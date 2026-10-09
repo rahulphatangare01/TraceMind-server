@@ -55,7 +55,8 @@ export class SecurityServiceDecryptionApi {
   ) {}
 
   async decrypt(request: DecryptRequest): Promise<DecryptResult> {
-    this.validationService.validateDecryptRequest(request);
+    // this.validationService.validateDecryptRequest(request);
+    const context = this.validationService.validateDecryptRequest(request);
 
     const encryptedEnvelope = serializeEncryptionEnvelope({
       version: ENCRYPTION_ENVELOPE_VERSION,
@@ -68,11 +69,14 @@ export class SecurityServiceDecryptionApi {
       keyVersion: request.keyVersion,
     });
 
+    // const plaintext = await this.encryptionService.decrypt(
+    //   encryptedEnvelope,
+    //   request.context,
+    // );
     const plaintext = await this.encryptionService.decrypt(
       encryptedEnvelope,
-      request.context,
+      context,
     );
-
     return { plaintext };
   }
 }

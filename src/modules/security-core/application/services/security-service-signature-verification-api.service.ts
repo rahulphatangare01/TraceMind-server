@@ -15,8 +15,14 @@ export class SecurityServiceSignatureVerificationApi {
   async verifySignature(
     request: VerifySignatureRequest,
   ): Promise<VerifySignatureResult> {
-    this.validationService.validateVerifySignatureRequest(request);
+    // this.validationService.validateVerifySignatureRequest(request);
+    // return this.cryptoProvider.verifySignature(request);
+    const context =
+      this.validationService.validateVerifySignatureRequest(request);
 
-    return this.cryptoProvider.verifySignature(request);
+    return this.cryptoProvider.verifySignature({
+      ...request,
+      context,
+    });
   }
 }

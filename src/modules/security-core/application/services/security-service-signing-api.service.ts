@@ -10,8 +10,13 @@ export class SecurityServiceSigningApi {
   ) {}
 
   async sign(request: SignRequest): Promise<SignResult> {
-    this.validationService.validateSignRequest(request);
+    // this.validationService.validateSignRequest(request);
+    // return this.cryptoProvider.sign(request);
+    const context = this.validationService.validateSignRequest(request);
 
-    return this.cryptoProvider.sign(request);
+    return this.cryptoProvider.sign({
+      ...request,
+      context,
+    });
   }
 }

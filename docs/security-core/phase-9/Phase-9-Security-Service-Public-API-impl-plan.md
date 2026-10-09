@@ -373,6 +373,33 @@ SecurityBoundaryValidator
 
 Every sensitive operation should use the appropriate context.
 
+- We need:
+
+```js
+Public Security API
+      ↓
+SecurityServiceValidationService
+      ↓
+SecurityContextValidator
+      ↓
+SecurityBoundaryValidator
+      ↓
+Normalized + validated SecurityContext
+      ↓
+Crypto / Encryption operation
+
+```
+
+- This matches the project plan:
+
+```js
+SecurityContext
+      ↓
+SecurityContextValidator
+      ↓
+SecurityBoundaryValidator
+```
+
 #### 9.14 — Provider Resolution Integration
 
 The Security Service should not know whether the provider is:
