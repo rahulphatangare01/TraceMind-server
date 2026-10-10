@@ -26,7 +26,11 @@ import {
   SecurityServiceHmacVerificationApi,
   SecurityServiceKeyManagementApi,
 } from "./application/services";
+import { ProviderRegistryService } from "./application/services/provider-registry.service.js";
 
+import { ProviderResolverService } from "./application/services/provider-resolver.service.js";
+
+import { SecurityServiceProviderResolution } from "./application/services/security-service-provider-resolution.service.js";
 // import { SecurityServiceHmacApi } from "./services/security-service-hmac-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
@@ -130,6 +134,14 @@ const securityServiceHmacVerificationApi =
 const securityServiceKeyManagementApi = new SecurityServiceKeyManagementApi(
   keyProvider,
 );
+
+const providerRegistry = new ProviderRegistryService();
+
+const providerResolver = new ProviderResolverService(providerRegistry);
+
+const securityServiceProviderResolution = new SecurityServiceProviderResolution(
+  providerResolver,
+);
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -151,6 +163,11 @@ export const securityCore = {
   signingService,
   hmacService,
 
+  // Provider resolution
+  providerRegistry,
+  providerResolver,
+
+  securityServiceProviderResolution,
   // Security Service API
   securityServiceValidation,
   securityServiceEncryptionApi,
