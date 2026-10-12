@@ -260,7 +260,7 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 9.12 Key Management API                                           ✅
 9.13 Security Context Integration                                 ✅
 9.14 Provider Resolution Integration                              ✅
-9.15 Security Service Error Handling
+9.15 Security Service Error Handling                              ✅
 9.16 Security Service Container / Dependency Wiring
 9.17 Public API Facade
 9.18 API Contract & Regression Tests
@@ -287,7 +287,7 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-context-integration.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-provider-resolution.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-error-handling.spec.ts
-
+npx vitest run src/modules/security-core/__tests__/application/security-service-container-wiring.spec.ts
 
 
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
@@ -304,6 +304,10 @@ npx tsx src/modules/security-core/__tests__/application/phase-9-12-security-serv
 npx tsx src/modules/security-core/__tests__/application/phase-9-13-security-context-integration.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-14-provider-resolution-integration.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-15-security-service-error-handling.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-16-security-service-container-wiring.manual.ts
+
+
+
 ```
 
 npm run test:security

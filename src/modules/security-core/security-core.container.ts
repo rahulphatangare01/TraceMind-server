@@ -12,10 +12,6 @@ import { LocalKeyMaterialProvider } from "./providers/local/local-key-material.p
 import { LocalSigningKeyProvider } from "./providers/local/local-signing-key.provider.js";
 import { LocalHmacKeyProvider } from "./providers/local/local-hmac-key.provider.js";
 import { LocalCryptoProvider } from "./providers/local/local-crypto.provider.js";
-// import { SecurityServiceDecryptionApi } from "./application/services/security-service-decryption-api.service.js";
-// import { SecurityServiceHashingApi } from "./application/services/security-service-hashing-api.service.js";
-// import { SecurityServiceHashVerificationApi } from "./application/services/security-service-hash-verification-api.service.js";
-// import { SecurityServiceSigningApi } from "./application/services/security-service-signing-api.service.js";
 import {
   SecurityServiceSignatureVerificationApi,
   SecurityServiceSigningApi,
@@ -27,10 +23,9 @@ import {
   SecurityServiceKeyManagementApi,
 } from "./application/services";
 import { ProviderRegistryService } from "./application/services/provider-registry.service.js";
-
 import { ProviderResolverService } from "./application/services/provider-resolver.service.js";
-
 import { SecurityServiceProviderResolution } from "./application/services/security-service-provider-resolution.service.js";
+import { SecurityServiceErrorHandlingService } from "./application/services/security-service-error-handling.service.js";
 // import { SecurityServiceHmacApi } from "./services/security-service-hmac-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
@@ -142,6 +137,13 @@ const providerResolver = new ProviderResolverService(providerRegistry);
 const securityServiceProviderResolution = new SecurityServiceProviderResolution(
   providerResolver,
 );
+
+// --------------------------------------------------
+// Security Service error handling
+// --------------------------------------------------
+
+const securityServiceErrorHandling = new SecurityServiceErrorHandlingService();
+
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
@@ -179,4 +181,6 @@ export const securityCore = {
   securityServiceHmacApi,
   securityServiceHmacVerificationApi,
   securityServiceKeyManagementApi,
+
+  securityServiceErrorHandling,
 };
