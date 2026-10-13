@@ -321,3 +321,24 @@ npm run test:security
 All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
 Follow
 Every Phase 9 step ├── Implementation ├── 1. Automated spec test ├── 2. Manual verification ├── Type-check ├── Build └── Review
+
+```js
+10.1	Full regression
+10.2	Type-check and build
+10.3	Encryption security review
+10.4	Key lifecycle review
+10.5	Cryptographic API review
+10.6	Tenant-isolation review
+10.7	Provider failure testing
+10.8	Error and logging review
+10.9	Documentation and sign-off
+Phase 10.10 — Integration and Regression
+10.11 — Documentation and Known Limitations
+Phase 10.12 — Final Verification and Sign-off
+```
+
+All test Case pass and no Security and type check issue and build is created properly, now we can procced for next
+Follow
+Every Phase 9 step ├── Implementation ├── 1. Automated spec test ├── 2. Manual verification ├── Type-check ├── Build └── Review
+
+npx vitest run src/modules/security-core/**tests** --reporter=default
