@@ -15,3 +15,4 @@ export * from "./security-service-key-management-api.service.js";
 export * from "./security-service-provider-resolution.service.js";
 
 export * from "./security-service-error-handling.service.js";
+export * from "./security-service.facade.js";
