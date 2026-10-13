@@ -57,8 +57,8 @@ describe("SecurityServiceDecryptionApi", () => {
       encryptionService as unknown as EncryptionService,
       validationService as unknown as SecurityServiceValidationService,
     );
+    validationService.validateDecryptRequest.mockReturnValue(request.context);
   });
-
   it("validates request and returns decrypted plaintext", async () => {
     const result = await service.decrypt(request);
 
@@ -81,7 +81,6 @@ describe("SecurityServiceDecryptionApi", () => {
       keyId: request.keyId,
       keyVersion: request.keyVersion,
     });
-
     expect(context).toBe(request.context);
     expect(result).toEqual({ plaintext: "decrypted-plaintext" });
   });

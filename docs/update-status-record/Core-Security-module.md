@@ -261,8 +261,8 @@ Every Phase 8 step ├── Implementation ├── 1. Automated spec test ├
 9.13 Security Context Integration                                 ✅
 9.14 Provider Resolution Integration                              ✅
 9.15 Security Service Error Handling                              ✅
-9.16 Security Service Container / Dependency Wiring
-9.17 Public API Facade
+9.16 Security Service Container / Dependency Wiring               ✅
+9.17 Public API Facade                                            ✅
 9.18 API Contract & Regression Tests
 9.19 Security Boundary Review
 9.20 Documentation
@@ -288,13 +288,16 @@ npx vitest run src/modules/security-core/__tests__/application/security-service-
 npx vitest run src/modules/security-core/__tests__/application/security-service-provider-resolution.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-error-handling.spec.ts
 npx vitest run src/modules/security-core/__tests__/application/security-service-container-wiring.spec.ts
-
+npx vitest run src/modules/security-core/__tests__/application/security-service-api-contract-regression.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-boundary-review.spec.ts
+npx vitest run src/modules/security-core/__tests__/application/security-service-documentation-contract.spec.ts
 
 npx tsx src/modules/security-core/__tests__/application/phase-9-1-security-service-contract.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-2-security-service-types.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-3-security-service-validation.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-4-security-service-encryption-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-5-security-service-decryption-api.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-6-security-service-hashing-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-7-security-service-hash-verification-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-8-security-service-signing-api.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-9-security-service-signature-verification-api.manual.ts
@@ -305,7 +308,10 @@ npx tsx src/modules/security-core/__tests__/application/phase-9-13-security-cont
 npx tsx src/modules/security-core/__tests__/application/phase-9-14-provider-resolution-integration.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-15-security-service-error-handling.manual.ts
 npx tsx src/modules/security-core/__tests__/application/phase-9-16-security-service-container-wiring.manual.ts
-
+npx tsx src/modules/security-core/__tests__/application/phase-9-17-public-api-facade.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-18-api-contract-regression.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-19-security-boundary-review.manual.ts
+npx tsx src/modules/security-core/__tests__/application/phase-9-20-documentation.manual.ts
 
 
 ```

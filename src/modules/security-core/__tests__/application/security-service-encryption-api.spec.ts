@@ -43,7 +43,7 @@ describe("SecurityServiceEncryptionApi", () => {
     validationService = {
       validateEncryptRequest: vi.fn(),
     };
-
+    validationService.validateEncryptRequest.mockReturnValue(request.context);
     service = new SecurityServiceEncryptionApi(
       encryptionService as unknown as EncryptionService,
       validationService as unknown as SecurityServiceValidationService,

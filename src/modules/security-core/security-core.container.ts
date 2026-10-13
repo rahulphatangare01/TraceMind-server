@@ -26,6 +26,7 @@ import { ProviderRegistryService } from "./application/services/provider-registr
 import { ProviderResolverService } from "./application/services/provider-resolver.service.js";
 import { SecurityServiceProviderResolution } from "./application/services/security-service-provider-resolution.service.js";
 import { SecurityServiceErrorHandlingService } from "./application/services/security-service-error-handling.service.js";
+import { SecurityServiceFacade } from "./application/services/security-service.facade.js";
 // import { SecurityServiceHmacApi } from "./services/security-service-hmac-api.service.js";
 // --------------------------------------------------
 // 1. Local providers
@@ -143,11 +144,22 @@ const securityServiceProviderResolution = new SecurityServiceProviderResolution(
 // --------------------------------------------------
 
 const securityServiceErrorHandling = new SecurityServiceErrorHandlingService();
+// const securityServiceFacade = new SecurityServiceFacade();
 
 // --------------------------------------------------
 // 7. Security Core container
 // --------------------------------------------------
-
+const securityService = new SecurityServiceFacade(
+  securityServiceEncryptionApi,
+  securityServiceDecryptionApi,
+  securityServiceHashingApi,
+  securityServiceHashVerificationApi,
+  securityServiceSigningApi,
+  securityServiceSignatureVerificationApi,
+  securityServiceHmacApi,
+  securityServiceHmacVerificationApi,
+  securityServiceErrorHandling,
+);
 export const securityCore = {
   // Providers
   keyProvider,
@@ -183,4 +195,6 @@ export const securityCore = {
   securityServiceKeyManagementApi,
 
   securityServiceErrorHandling,
+  // SecurityServiceFacade,
+  securityService,
 };
