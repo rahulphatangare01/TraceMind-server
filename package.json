@@ -12,7 +12,8 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "db:schema": "tsx src/database/scripts/run-schemas.ts",
-    "test:security": "vitest run src/modules/security-core/__tests__"
+    "test:security": "vitest run src/modules/security-core/__tests__",
+    "test:security:manual": "tsx scripts/run-security-manual-tests.ts"
   },
   "keywords": [],
   "author": "",
