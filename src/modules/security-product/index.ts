@@ -29,3 +29,23 @@ export type {
 export { createSecurityProductCommonInfrastructurePort } from "./application/services/common-infrastructure.port-factory.js";
 
 export type { SecurityProductCommonInfrastructureDependencies } from "./application/services/common-infrastructure.port-factory.js";
+
+export type {
+  TenantResourceOwnershipServicePort,
+  SecurityProductServiceBoundaries,
+} from "./application/interfaces/security-product-services.port.js";
+
+export { createSecurityProductServiceBoundaries } from "./application/services/security-product-services.factory.js";
+
+export type { SecurityProductServiceBoundaryDependencies } from "./application/services/security-product-services.factory.js";
+
+export type { SecurityResourceScope } from "./application/interfaces/security-resource-scope.port.js";
+
+export type { SecurityProductPersistencePort } from "./application/interfaces/security-product-persistence.port.js";
+
+export type {
+  FutureIamAuthorizationPort,
+  SecurityProductActor,
+  SecurityProductAuthorizationDecision,
+  SecurityProductAuthorizationRequest,
+} from "./application/interfaces/future-iam.port.js";

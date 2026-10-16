@@ -3,9 +3,14 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("Phase 8.17 - Local Provider Documentation", () => {
+  // const documentationPath = resolve(
+  //   process.cwd(),
+  //   "docs/security-core/local-provider.md",
+  // );
+
   const documentationPath = resolve(
     process.cwd(),
-    "docs/security-core/local-provider.md",
+    "docs/security-core/phase-7/local-provider.md",
   );
 
   it("should contain the Local Provider documentation", () => {
