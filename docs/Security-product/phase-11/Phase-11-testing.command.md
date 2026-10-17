@@ -11,6 +11,12 @@ npx vitest run src/modules/security-product/**tests**/security-product-persisten
 npx vitest run src/modules/security-product/**tests**/future-iam.port.spec.ts
 npx vitest run src/modules/security-product/**tests**/security-product.architecture-boundary.spec.ts
 npx vitest run src/modules/security-product/**tests**/security-product.architecture-boundary.spec.ts
+
+
+
+
+npx vitest run src/modules/security-product/__tests__/security-product-persistence-requirements.spec.ts
+
 ```
 
 ### Manual Testing File command
