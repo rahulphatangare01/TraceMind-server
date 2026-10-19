@@ -16,7 +16,8 @@ npx vitest run src/modules/security-product/**tests**/security-product.architect
 
 
 npx vitest run src/modules/security-product/__tests__/security-product-persistence-requirements.spec.ts
-
+npx vitest run src/modules/security-product/__tests__/security-product-schema-design.spec.ts
+npx vitest run src/modules/security-product/__tests__/security-resource-persistence-models.spec.ts
 ```
 
 ### Manual Testing File command
@@ -28,6 +29,9 @@ npx tsx src/modules/security-product/**tests**/security-product-services.manual.
 npx tsx src/modules/security-product/**tests**/security-product-persistence.port.manual.ts
 npx tsx src/modules/security-product/**tests**/future-iam.port.manual.ts
 npx tsx src/modules/security-product/**tests**/security-product-dependency-rules.manual.ts
+
+
+npx tsx src/modules/security-product/__tests__/security-product-schema-design.manual.ts
 ```
 
 ```js
