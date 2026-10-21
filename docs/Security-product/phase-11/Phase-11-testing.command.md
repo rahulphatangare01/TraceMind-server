@@ -18,6 +18,9 @@ npx vitest run src/modules/security-product/**tests**/security-product.architect
 npx vitest run src/modules/security-product/__tests__/security-product-persistence-requirements.spec.ts
 npx vitest run src/modules/security-product/__tests__/security-product-schema-design.spec.ts
 npx vitest run src/modules/security-product/__tests__/security-resource-persistence-models.spec.ts
+npx vitest run src/modules/security-product/__tests__/security-key.mysql.repository.spec.ts
+npx vitest run src/modules/security-product/__tests__/security-key-version.mysql.repository.spec.ts
+npx vitest run src/modules/security-product/__tests__/security-key.transaction.mysql.adapter.spec.ts
 ```
 
 ### Manual Testing File command
