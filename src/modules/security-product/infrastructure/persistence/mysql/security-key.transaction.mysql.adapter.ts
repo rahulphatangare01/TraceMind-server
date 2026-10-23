@@ -195,6 +195,14 @@ export class SecurityKeyTransactionMySQLAdapter implements SecurityKeyTransactio
     updatedAt: Date,
     updatedBy?: string | null,
   ): Promise<boolean> {
+    // if (
+    //   previousVersion.keyId !== keyId ||
+    //   nextVersion.keyId !== keyId ||
+    //   previousVersion.version !== expectedCurrentVersion ||
+    //   nextVersion.version !== expectedCurrentVersion + 1
+    // ) {
+    //   throw new Error("Key rotation version sequence is invalid.");
+    // }
     if (
       previousVersion.keyId !== keyId ||
       nextVersion.keyId !== keyId ||
@@ -204,6 +212,12 @@ export class SecurityKeyTransactionMySQLAdapter implements SecurityKeyTransactio
       throw new Error("Key rotation version sequence is invalid.");
     }
 
+    if (
+      previousVersion.status !== "DECRYPT_ONLY" ||
+      nextVersion.status !== "ACTIVE"
+    ) {
+      throw new Error("Key rotation lifecycle states are invalid.");
+    }
     const predicate = buildScopePredicate(scope);
     const connection = await pool.getConnection();
 
@@ -231,17 +245,34 @@ export class SecurityKeyTransactionMySQLAdapter implements SecurityKeyTransactio
         return false;
       }
 
+      // const [versionRows] = await connection.execute<RowDataPacket[]>(
+      //   `
+      //     SELECT id, key_id AS keyId, version, status
+      //     FROM security_key_versions
+      //     WHERE key_id = ? AND version = ?
+      //     LIMIT 1
+      //     FOR UPDATE
+      //   `,
+      //   [keyId, expectedCurrentVersion],
+      // );
       const [versionRows] = await connection.execute<RowDataPacket[]>(
         `
-          SELECT id, key_id AS keyId, version, status
-          FROM security_key_versions
-          WHERE key_id = ? AND version = ?
-          LIMIT 1
-          FOR UPDATE
-        `,
-        [keyId, expectedCurrentVersion],
+    SELECT
+      v.id,
+      v.key_id AS keyId,
+      v.version,
+      v.status
+    FROM security_key_versions v
+    INNER JOIN security_keys k ON k.id = v.key_id
+    WHERE ${predicate.sql}
+      AND k.id = ?
+      AND k.deleted_at IS NULL
+      AND v.version = ?
+    LIMIT 1
+    FOR UPDATE
+  `,
+        [...predicate.values, keyId, expectedCurrentVersion],
       );
-
       if (versionRows.length === 0 || versionRows[0].status !== "ACTIVE") {
         throw new Error("The current key version is missing or is not ACTIVE.");
       }
@@ -254,8 +285,15 @@ export class SecurityKeyTransactionMySQLAdapter implements SecurityKeyTransactio
             AND version = ?
             AND status = ?
         `,
+        // [
+        //   previousVersion.status,
+        //   previousVersion.rotatedAt ?? updatedAt,
+        //   keyId,
+        //   expectedCurrentVersion,
+        //   "ACTIVE",
+        // ],
         [
-          previousVersion.status,
+          "DECRYPT_ONLY",
           previousVersion.rotatedAt ?? updatedAt,
           keyId,
           expectedCurrentVersion,
