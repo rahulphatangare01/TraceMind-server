@@ -21,6 +21,7 @@ npx vitest run src/modules/security-product/__tests__/security-resource-persiste
 npx vitest run src/modules/security-product/__tests__/security-key.mysql.repository.spec.ts
 npx vitest run src/modules/security-product/__tests__/security-key-version.mysql.repository.spec.ts
 npx vitest run src/modules/security-product/__tests__/security-key.transaction.mysql.adapter.spec.ts
+npx vitest run src/modules/security-product/__tests__/security-key-persistence.service.spec.ts
 ```
 
 ### Manual Testing File command
