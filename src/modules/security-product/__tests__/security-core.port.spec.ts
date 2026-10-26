@@ -34,8 +34,13 @@ describe("Security Product Security Core integration boundary", () => {
 
   it("does not expose the Security Core container as a port member", () => {
     // expect(Object.keys(securityProduct).sort()).toEqual(["securityCore"]);
+    // expect(Object.keys(securityProduct).sort()).toEqual([
+    //   "securityCore",
+    //   "tenantResourceOwnership",
+    // ]);
     expect(Object.keys(securityProduct).sort()).toEqual([
       "securityCore",
+      "securityKeyPersistence",
       "tenantResourceOwnership",
     ]);
     expect("securityService" in port).toBe(false);
