@@ -1,39 +1,18 @@
-// import { securityCore } from "../security-core/security-core.container.js";
-// import type { SecurityCorePort } from "./application/interfaces/security-core.port.js";
-
-// /**
-//  * Composition root for Security Product.
-//  *
-//  * This is the only production file in Security Product that imports the
-//  * concrete Security Core container. Product application services should
-//  * receive SecurityCorePort through dependency injection instead.
-//  */
-// const securityCorePort: SecurityCorePort = {
-//   operations: securityCore.securityService,
-//   keyManagement: securityCore.securityServiceKeyManagementApi,
-// };
-
-// export const securityProduct = {
-//   securityCore: securityCorePort,
-// } as const;
-
 import { securityCore } from "../security-core/security-core.container.js";
-
 import {
   organizationService,
   projectService,
   applicationService,
   environmentService,
 } from "../tenants/container/tenant.container.js";
-
 import type { SecurityCorePort } from "./application/interfaces/security-core.port.js";
-
 import type { TenantResourceOwnershipPort } from "./application/interfaces/tenant-resource-ownership.port.js";
-
 import type { SecurityContextValidationPort } from "./application/interfaces/security-context-validation.port.js";
-
 import { TenantResourceOwnershipService } from "./application/services/tenant-resource-ownership.service.js";
-
+import { SecurityKeyPersistenceService } from "./application/services/security-key-persistence.service.js";
+import { SecurityKeyMySQLRepository } from "./infrastructure/persistence/mysql/security-key.mysql.repository.js";
+import { SecurityKeyVersionMySQLRepository } from "./infrastructure/persistence/mysql/security-key-version.mysql.repository.js";
+import { SecurityKeyTransactionMySQLAdapter } from "./infrastructure/persistence/mysql/security-key.transaction.mysql.adapter.js";
 /**
  * Security Core integration boundary.
  *
@@ -92,7 +71,30 @@ const tenantResourceOwnershipService = new TenantResourceOwnershipService(
   securityContextValidationPort,
 );
 
+/**
+ * Security key persistence infrastructure.
+ *
+ * Concrete MySQL adapters are instantiated only at the
+ * Security Product composition root.
+ */
+const securityKeyRepository = new SecurityKeyMySQLRepository();
+
+const securityKeyVersionRepository = new SecurityKeyVersionMySQLRepository();
+
+const securityKeyTransaction = new SecurityKeyTransactionMySQLAdapter();
+
+/**
+ * Scoped Security Product persistence service.
+ *
+ * All operations require an explicit tenant resource scope.
+ */
+const securityKeyPersistenceService = new SecurityKeyPersistenceService(
+  securityKeyRepository,
+  securityKeyVersionRepository,
+  securityKeyTransaction,
+);
 export const securityProduct = {
   securityCore: securityCorePort,
   tenantResourceOwnership: tenantResourceOwnershipService,
+  securityKeyPersistence: securityKeyPersistenceService,
 } as const;
