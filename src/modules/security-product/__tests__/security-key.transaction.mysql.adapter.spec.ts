@@ -374,6 +374,38 @@ describe("SecurityKeyTransactionMySQLAdapter", () => {
     //   expect(mockConnection.release).toHaveBeenCalledTimes(1);
     // });
 
+    it("rotates atomically when the expected version matches", async () => {
+      configureRotationRows(1);
+
+      const result = await rotate();
+
+      expect(result).toBe(true);
+      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
+
+      const statements = [
+        ...mockConnection.query.mock.calls,
+        ...mockConnection.execute.mock.calls,
+      ].map(([sql]) => String(sql));
+
+      expect(
+        statements.some((sql) => /UPDATE\s+security_key_versions/i.test(sql)),
+      ).toBe(true);
+
+      expect(
+        statements.some((sql) =>
+          /INSERT INTO\s+security_key_versions/i.test(sql),
+        ),
+      ).toBe(true);
+
+      expect(
+        statements.some((sql) => /UPDATE\s+security_keys/i.test(sql)),
+      ).toBe(true);
+
+      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
+      expect(mockConnection.rollback).not.toHaveBeenCalled();
+      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+    });
+
     // --------------------------------------------
     it("rejects invalid lifecycle states before opening a transaction", async () => {
       await expect(

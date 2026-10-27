@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import type { KeyStatus } from "../../security-core/public-api.js";
 const { executeMock } = vi.hoisted(() => ({
   executeMock: vi.fn(),
 }));
@@ -117,6 +117,64 @@ describe("SecurityKeyMySQLRepository", () => {
       "org-001",
       "project-001",
       "key-001",
+    ]);
+  });
+
+  it("updates only a matching, non-deleted scoped key", async () => {
+    executeMock
+      .mockResolvedValueOnce([{ affectedRows: 1 }, []])
+      .mockResolvedValueOnce([[dbRow], []]);
+
+    const repository = new SecurityKeyMySQLRepository();
+
+    const result = await repository.update(scope, "key-001", {
+      // status: "DISABLED" as typeof dbRow.status,
+      status: "DISABLED" as KeyStatus,
+      updatedBy: "user-001",
+    });
+
+    expect(result?.id).toBe("key-001");
+
+    const [query, parameters] = executeMock.mock.calls[0];
+
+    expect(query).toContain("UPDATE security_keys");
+    expect(query).toContain("organization_id = ?");
+    expect(query).toContain("project_id = ?");
+    expect(query).toContain("application_id IS NULL");
+    expect(query).toContain("environment_id IS NULL");
+    expect(query).toContain("deleted_at IS NULL");
+
+    expect(parameters).toEqual([
+      "DISABLED",
+      "user-001",
+      "PROJECT",
+      "org-001",
+      "project-001",
+      "key-001",
+    ]);
+  });
+
+  it("returns false when soft-deleting a key outside the supplied scope", async () => {
+    executeMock.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
+
+    const repository = new SecurityKeyMySQLRepository();
+
+    await expect(
+      repository.softDelete(scope, "key-outside-scope", "user-001"),
+    ).resolves.toBe(false);
+
+    const [query, parameters] = executeMock.mock.calls[0];
+
+    expect(query).toContain("organization_id = ?");
+    expect(query).toContain("project_id = ?");
+    expect(query).toContain("deleted_at IS NULL");
+
+    expect(parameters).toEqual([
+      "user-001",
+      "PROJECT",
+      "org-001",
+      "project-001",
+      "key-outside-scope",
     ]);
   });
 
