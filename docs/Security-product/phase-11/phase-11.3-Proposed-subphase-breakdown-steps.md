@@ -1,4 +1,4 @@
-## Phase 11.3 — Proposed subphase breakdown
+## Phase 11.3 — Security Product Persistence Foundation
 
 Based on the work completed in Phase 11.2, I recommend the following next phase.
 

@@ -149,6 +149,39 @@ describe("SecurityKeyVersionMySQLRepository", () => {
     ]);
   });
 
+  it("returns null when the scoped version update affects no rows", async () => {
+    executeMock
+      .mockResolvedValueOnce([{ affectedRows: 0 }, []])
+      .mockResolvedValueOnce([[], []]);
+
+    const repository = new SecurityKeyVersionMySQLRepository();
+
+    const result = await repository.update(scope, "key-outside-scope", 1, {
+      status: "DECRYPT_ONLY" as KeyStatus,
+    });
+
+    expect(result).toBeNull();
+
+    const [query, parameters] = executeMock.mock.calls[0];
+
+    expect(query).toContain("UPDATE security_key_versions");
+    expect(query).toContain("INNER JOIN security_keys");
+    expect(query).toContain("k.organization_id = ?");
+    expect(query).toContain("k.project_id = ?");
+    expect(query).toContain("k.application_id IS NULL");
+    expect(query).toContain("k.environment_id IS NULL");
+    expect(query).toContain("k.deleted_at IS NULL");
+
+    expect(parameters).toEqual([
+      "DECRYPT_ONLY",
+      "PROJECT",
+      "org-001",
+      "project-001",
+      "key-outside-scope",
+      1,
+    ]);
+  });
+
   it("maps nullable lifecycle timestamps to null", async () => {
     executeMock.mockResolvedValueOnce([
       [

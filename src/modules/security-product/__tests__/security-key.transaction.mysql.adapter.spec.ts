@@ -342,6 +342,56 @@ describe("SecurityKeyTransactionMySQLAdapter", () => {
         "user-111",
       );
 
+    it("applies the complete tenant scope to rotation queries", async () => {
+      configureRotationRows(1);
+
+      await rotate();
+
+      const statements = [
+        ...mockConnection.query.mock.calls,
+        ...mockConnection.execute.mock.calls,
+      ].map(([sql]) => String(sql));
+
+      const keySelect = statements.find(
+        (sql) =>
+          /^\s*SELECT\b/i.test(sql) && /FROM\s+security_keys\s+k/i.test(sql),
+      );
+
+      const versionSelect = statements.find(
+        (sql) =>
+          /^\s*SELECT\b/i.test(sql) &&
+          /FROM\s+security_key_versions\s+v/i.test(sql),
+      );
+
+      const keyUpdate = statements.find((sql) =>
+        /UPDATE\s+security_keys\s+k/i.test(sql),
+      );
+
+      const previousVersionUpdate = statements.find((sql) =>
+        /UPDATE\s+security_key_versions\s+v/i.test(sql),
+      );
+
+      expect(previousVersionUpdate).toContain("INNER JOIN security_keys k");
+      expect(previousVersionUpdate).toContain("k.organization_id = ?");
+      expect(previousVersionUpdate).toContain("k.project_id = ?");
+      expect(previousVersionUpdate).toContain("k.application_id IS NULL");
+      expect(previousVersionUpdate).toContain("k.environment_id IS NULL");
+      expect(previousVersionUpdate).toContain("k.deleted_at IS NULL");
+
+      expect(keySelect).toContain("k.organization_id = ?");
+      expect(keySelect).toContain("k.project_id = ?");
+      expect(keySelect).toContain("k.deleted_at IS NULL");
+
+      expect(versionSelect).toContain("INNER JOIN security_keys k");
+      expect(versionSelect).toContain("k.organization_id = ?");
+      expect(versionSelect).toContain("k.project_id = ?");
+      expect(versionSelect).toContain("k.deleted_at IS NULL");
+
+      expect(keyUpdate).toContain("k.organization_id = ?");
+      expect(keyUpdate).toContain("k.project_id = ?");
+      expect(keyUpdate).toContain("k.deleted_at IS NULL");
+    });
+
     // it("rotates atomically when the expected version matches", async () => {
     //   configureRotationRows(1);
 
