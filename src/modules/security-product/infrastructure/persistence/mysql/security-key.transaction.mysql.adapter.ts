@@ -277,24 +277,42 @@ export class SecurityKeyTransactionMySQLAdapter implements SecurityKeyTransactio
         throw new Error("The current key version is missing or is not ACTIVE.");
       }
 
+      //     const [previousUpdate] = await connection.execute<ResultSetHeader>(
+      //       `
+      //   UPDATE security_key_versions v
+      //   INNER JOIN security_keys k ON k.id = v.key_id
+      //   SET v.status = ?, v.rotated_at = ?
+      //   WHERE ${predicate.sql}
+      //     AND k.id = ?
+      //     AND k.deleted_at IS NULL
+      //     AND v.version = ?
+      //     AND v.status = ?
+      // `,
+      //       [
+      //         "DECRYPT_ONLY",
+      //         previousVersion.rotatedAt ?? updatedAt,
+      //         ...predicate.values,
+      //         keyId,
+      //         expectedCurrentVersion,
+      //         "ACTIVE",
+      //       ],
+      //     );
+
       const [previousUpdate] = await connection.execute<ResultSetHeader>(
         `
-          UPDATE security_key_versions
-          SET status = ?, rotated_at = ?
-          WHERE key_id = ?
-            AND version = ?
-            AND status = ?
-        `,
-        // [
-        //   previousVersion.status,
-        //   previousVersion.rotatedAt ?? updatedAt,
-        //   keyId,
-        //   expectedCurrentVersion,
-        //   "ACTIVE",
-        // ],
+    UPDATE security_key_versions v
+    INNER JOIN security_keys k ON k.id = v.key_id
+    SET v.status = ?, v.rotated_at = ?
+    WHERE ${predicate.sql}
+      AND k.id = ?
+      AND k.deleted_at IS NULL
+      AND v.version = ?
+      AND v.status = ?
+  `,
         [
           "DECRYPT_ONLY",
           previousVersion.rotatedAt ?? updatedAt,
+          ...predicate.values,
           keyId,
           expectedCurrentVersion,
           "ACTIVE",
