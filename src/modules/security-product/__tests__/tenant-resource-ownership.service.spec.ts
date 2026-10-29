@@ -182,6 +182,313 @@ describe("TenantResourceOwnershipService", () => {
   //     });
   //   });
 
+  it("resolves a project-scoped context", async () => {
+    const result = await service.resolve({
+      scope: SecurityScope.PROJECT,
+      organizationId: "org-1",
+      projectId: "project-1",
+      classification: DataClassification.INTERNAL,
+      purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+    });
+
+    expect(result.scope).toBe(SecurityScope.PROJECT);
+
+    if (result.scope !== SecurityScope.PROJECT) {
+      throw new Error("Expected project-scoped result");
+    }
+
+    expect(result.organization.id).toBe("org-1");
+    expect(result.project.id).toBe("project-1");
+  });
+
+  it("resolves an application-scoped context", async () => {
+    const result = await service.resolve({
+      scope: SecurityScope.APPLICATION,
+      organizationId: "org-1",
+      projectId: "project-1",
+      applicationId: "app-1",
+      classification: DataClassification.INTERNAL,
+      purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+    });
+
+    expect(result.scope).toBe(SecurityScope.APPLICATION);
+
+    if (result.scope !== SecurityScope.APPLICATION) {
+      throw new Error("Expected application-scoped result");
+    }
+
+    expect(result.organization.id).toBe("org-1");
+    expect(result.project.id).toBe("project-1");
+    expect(result.application.id).toBe("app-1");
+  });
+
+  it("rejects an organization that cannot be found", async () => {
+    vi.mocked(tenantLookup.findOrganizationById).mockResolvedValueOnce(null);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ORGANIZATION,
+        organizationId: "org-404",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "ORGANIZATION_NOT_FOUND",
+    });
+
+    expect(tenantLookup.findProjectById).not.toHaveBeenCalled();
+  });
+
+  it("rejects an application that cannot be found", async () => {
+    vi.mocked(tenantLookup.findApplicationById).mockResolvedValueOnce(null);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.APPLICATION,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-404",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "APPLICATION_NOT_FOUND",
+    });
+  });
+
+  it("rejects an environment that cannot be found", async () => {
+    vi.mocked(tenantLookup.findEnvironmentById).mockResolvedValueOnce(null);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ENVIRONMENT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        environmentId: "env-404",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "ENVIRONMENT_NOT_FOUND",
+    });
+  });
+
+  it("rejects an application returned with a mismatched organization", async () => {
+    vi.mocked(tenantLookup.findApplicationById).mockResolvedValueOnce({
+      ...application,
+      organizationId: "org-other",
+    } as Application);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.APPLICATION,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an application returned with a mismatched project", async () => {
+    vi.mocked(tenantLookup.findApplicationById).mockResolvedValueOnce({
+      ...application,
+      projectId: "project-other",
+    } as Application);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.APPLICATION,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an environment returned with a mismatched organization", async () => {
+    vi.mocked(tenantLookup.findEnvironmentById).mockResolvedValueOnce({
+      ...environment,
+      organizationId: "org-other",
+    } as Environment);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ENVIRONMENT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        environmentId: "env-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an environment returned with a mismatched project", async () => {
+    vi.mocked(tenantLookup.findEnvironmentById).mockResolvedValueOnce({
+      ...environment,
+      projectId: "project-other",
+    } as Environment);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ENVIRONMENT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        environmentId: "env-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an environment returned with a mismatched application", async () => {
+    vi.mocked(tenantLookup.findEnvironmentById).mockResolvedValueOnce({
+      ...environment,
+      applicationId: "app-other",
+    } as Environment);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ENVIRONMENT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        environmentId: "env-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an organization lookup returning a different ID", async () => {
+    vi.mocked(tenantLookup.findOrganizationById).mockResolvedValueOnce({
+      ...organization,
+      id: "org-other",
+    } as Organization);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ORGANIZATION,
+        organizationId: "org-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an application lookup returning a different ID", async () => {
+    vi.mocked(tenantLookup.findApplicationById).mockResolvedValueOnce({
+      ...application,
+      id: "app-other",
+    } as Application);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.APPLICATION,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  it("rejects an environment lookup returning a different ID", async () => {
+    vi.mocked(tenantLookup.findEnvironmentById).mockResolvedValueOnce({
+      ...environment,
+      id: "env-other",
+    } as Environment);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.ENVIRONMENT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        applicationId: "app-1",
+        environmentId: "env-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
+
+  // it("rejects field scope for tenant ownership resolution", async () => {
+  //   await expect(
+  //     service.resolve({
+  //       scope: SecurityScope.FIELD,
+  //       organizationId: "org-1",
+  //       classification: DataClassification.INTERNAL,
+  //       purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+  //     }),
+  //   ).rejects.toMatchObject({
+  //     name: "TenantResourceOwnershipError",
+  //     code: "UNSUPPORTED_SCOPE",
+  //   });
+
+  //   expect(tenantLookup.findOrganizationById).not.toHaveBeenCalled();
+  // });
+
+  it("rejects field scope for tenant ownership resolution", async () => {
+    await expect(
+      service.resolve({
+        scope: SecurityScope.FIELD,
+        organizationId: "org-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      name: "SecurityContextValidationError",
+      code: "SECURITY_CONTEXT_VALIDATION_ERROR",
+    });
+
+    expect(tenantLookup.findOrganizationById).not.toHaveBeenCalled();
+    expect(tenantLookup.findProjectById).not.toHaveBeenCalled();
+    expect(tenantLookup.findApplicationById).not.toHaveBeenCalled();
+    expect(tenantLookup.findEnvironmentById).not.toHaveBeenCalled();
+  });
+  it("rejects a project lookup returning a different project ID", async () => {
+    vi.mocked(tenantLookup.findProjectById).mockResolvedValueOnce({
+      ...project,
+      id: "project-2",
+    } as Project);
+
+    await expect(
+      service.resolve({
+        scope: SecurityScope.PROJECT,
+        organizationId: "org-1",
+        projectId: "project-1",
+        classification: DataClassification.INTERNAL,
+        purpose: SecurityPurpose.ENCRYPTED_CONFIGURATION,
+      }),
+    ).rejects.toMatchObject({
+      name: "TenantResourceOwnershipError",
+      code: "OWNERSHIP_MISMATCH",
+    });
+  });
   it("rejects a project returned with a mismatched organization", async () => {
     vi.mocked(tenantLookup.findProjectById).mockResolvedValueOnce({
       ...project,
